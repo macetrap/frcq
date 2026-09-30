@@ -1,0 +1,987 @@
+// List of 123 popular FRC teams from frc_team_numbers.txt
+const POPULAR_TEAMS = [
+  {
+    "number": 4946,
+    "key": "frc4946",
+    "name": "The Alpha Dogs",
+    "city": "Bolton",
+    "state": "Ontario",
+    "country": "Canada"
+  },
+  {
+    "number": 6328,
+    "key": "frc6328",
+    "name": "Mechanical Advantage",
+    "city": "Littleton",
+    "state": "Massachusetts",
+    "country": "USA"
+  },
+  {
+    "number": 1690,
+    "key": "frc1690",
+    "name": "Orbit",
+    "city": "Binyamina",
+    "state": "HaZafon",
+    "country": "Israel"
+  },
+  {
+    "number": 118,
+    "key": "frc118",
+    "name": "Robonauts",
+    "city": "Houston",
+    "state": "Texas",
+    "country": "USA"
+  },
+  {
+    "number": 1678,
+    "key": "frc1678",
+    "name": "Citrus Circuits",
+    "city": "Davis",
+    "state": "California",
+    "country": "USA"
+  },
+  {
+    "number": 1323,
+    "key": "frc1323",
+    "name": "MadTown Robotics",
+    "city": "Madera",
+    "state": "California",
+    "country": "USA"
+  },
+  {
+    "number": 4414,
+    "key": "frc4414",
+    "name": "HighTide",
+    "city": "Ventura",
+    "state": "California",
+    "country": "USA"
+  },
+  {
+    "number": 27,
+    "key": "frc27",
+    "name": "Team RUSH",
+    "city": "Clarkston",
+    "state": "Michigan",
+    "country": "USA"
+  },
+  {
+    "number": 6800,
+    "key": "frc6800",
+    "name": "Valor",
+    "city": "Austin",
+    "state": "Texas",
+    "country": "USA"
+  },
+  {
+    "number": 2910,
+    "key": "frc2910",
+    "name": "Jack in the Bot",
+    "city": "Mill Creek",
+    "state": "Washington",
+    "country": "USA"
+  },
+  {
+    "number": 254,
+    "key": "frc254",
+    "name": "The Cheesy Poofs",
+    "city": "San Jose",
+    "state": "California",
+    "country": "USA"
+  },
+  {
+    "number": 5940,
+    "key": "frc5940",
+    "name": "BREAD",
+    "city": "Redwood City",
+    "state": "California",
+    "country": "USA"
+  },
+  {
+    "number": 359,
+    "key": "frc359",
+    "name": "Hawaiian Kids",
+    "city": "Waialua",
+    "state": "Hawaii",
+    "country": "USA"
+  },
+  {
+    "number": 2056,
+    "key": "frc2056",
+    "name": "OP Robotics",
+    "city": "Stoney Creek",
+    "state": "Ontario",
+    "country": "Canada"
+  },
+  {
+    "number": 6329,
+    "key": "frc6329",
+    "name": "The Bucks' Wrath",
+    "city": "Bucksport",
+    "state": "Maine",
+    "country": "USA"
+  },
+  {
+    "number": 2046,
+    "key": "frc2046",
+    "name": "Bear Metal",
+    "city": "Maple Valley",
+    "state": "Washington",
+    "country": "USA"
+  },
+  {
+    "number": 5000,
+    "key": "frc5000",
+    "name": "HAMMERHEADS",
+    "city": "Hingham",
+    "state": "Massachusetts",
+    "country": "USA"
+  },
+  {
+    "number": 125,
+    "key": "frc125",
+    "name": "NUTRONs",
+    "city": "Revere",
+    "state": "Massachusetts",
+    "country": "USA"
+  },
+  {
+    "number": 604,
+    "key": "frc604",
+    "name": "Quixilver",
+    "city": "San Jose",
+    "state": "California",
+    "country": "USA"
+  },
+  {
+    "number": 1114,
+    "key": "frc1114",
+    "name": "Simbotics",
+    "city": "St Catharines",
+    "state": "Ontario",
+    "country": "Canada"
+  },
+  {
+    "number": 7769,
+    "key": "frc7769",
+    "name": "The CREW",
+    "city": "Royal Oak",
+    "state": "Michigan",
+    "country": "USA"
+  },
+  {
+    "number": 3538,
+    "key": "frc3538",
+    "name": "RoboJackets",
+    "city": "Auburn Hills",
+    "state": "Michigan",
+    "country": "USA"
+  },
+  {
+    "number": 9496,
+    "key": "frc9496",
+    "name": "LYNK",
+    "city": "Spindale",
+    "state": "North Carolina",
+    "country": "USA"
+  },
+  {
+    "number": 33,
+    "key": "frc33",
+    "name": "Killer Bees",
+    "city": "Bloomfield Hills",
+    "state": "Michigan",
+    "country": "USA"
+  },
+  {
+    "number": 4481,
+    "key": "frc4481",
+    "name": "Team Rembrandts",
+    "city": "Eindhoven",
+    "state": "Noord-Brabant",
+    "country": "Netherlands"
+  },
+  {
+    "number": 148,
+    "key": "frc148",
+    "name": "Robowranglers",
+    "city": "Greenville",
+    "state": "Texas",
+    "country": "USA"
+  },
+  {
+    "number": 9470,
+    "key": "frc9470",
+    "name": "Ctrl-Alt-Defeat",
+    "city": "Fremont",
+    "state": "California",
+    "country": "USA"
+  },
+  {
+    "number": 8044,
+    "key": "frc8044",
+    "name": "Denham Venom",
+    "city": "Denham Springs",
+    "state": "Louisiana",
+    "country": "USA"
+  },
+  {
+    "number": 1987,
+    "key": "frc1987",
+    "name": "Broncobots",
+    "city": "Lees Summit",
+    "state": "Missouri",
+    "country": "USA"
+  },
+  {
+    "number": 3476,
+    "key": "frc3476",
+    "name": "Code Orange",
+    "city": "Irvine",
+    "state": "California",
+    "country": "USA"
+  },
+  {
+    "number": 5460,
+    "key": "frc5460",
+    "name": "Strike Zone",
+    "city": "Lapeer",
+    "state": "Michigan",
+    "country": "USA"
+  },
+  {
+    "number": 1768,
+    "key": "frc1768",
+    "name": "Nashoba Robotics",
+    "city": "Bolton",
+    "state": "Massachusetts",
+    "country": "USA"
+  },
+  {
+    "number": 111,
+    "key": "frc111",
+    "name": "WildStang",
+    "city": "Arlington Heights",
+    "state": "Illinois",
+    "country": "USA"
+  },
+  {
+    "number": 9483,
+    "key": "frc9483",
+    "name": "Overcharge",
+    "city": "Cekmekoy",
+    "state": "Istanbul",
+    "country": "Türkiye"
+  },
+  {
+    "number": 5687,
+    "key": "frc5687",
+    "name": "The Outliers",
+    "city": "Portland",
+    "state": "Maine",
+    "country": "USA"
+  },
+  {
+    "number": 2481,
+    "key": "frc2481",
+    "name": "Roboteers",
+    "city": "Tremont",
+    "state": "Illinois",
+    "country": "USA"
+  },
+  {
+    "number": 9128,
+    "key": "frc9128",
+    "name": "ITKAN Robotics",
+    "city": "Plano",
+    "state": "Texas",
+    "country": "USA"
+  },
+  {
+    "number": 3467,
+    "key": "frc3467",
+    "name": "Windham Windup",
+    "city": "Windham",
+    "state": "New Hampshire",
+    "country": "USA"
+  },
+  {
+    "number": 7457,
+    "key": "frc7457",
+    "name": "suPURDUEper Robotics",
+    "city": "Indianapolis",
+    "state": "Indiana",
+    "country": "USA"
+  },
+  {
+    "number": 67,
+    "key": "frc67",
+    "name": "The HOT Team",
+    "city": "Highland",
+    "state": "Michigan",
+    "country": "USA"
+  },
+  {
+    "number": 973,
+    "key": "frc973",
+    "name": "Greybots",
+    "city": "Atascadero",
+    "state": "California",
+    "country": "USA"
+  },
+  {
+    "number": 694,
+    "key": "frc694",
+    "name": "StuyPulse",
+    "city": "New York",
+    "state": "New York",
+    "country": "USA"
+  },
+  {
+    "number": 190,
+    "key": "frc190",
+    "name": "Gompei and the HERD",
+    "city": "Worcester",
+    "state": "Massachusetts",
+    "country": "USA"
+  },
+  {
+    "number": 7558,
+    "key": "frc7558",
+    "name": "ALT-F4",
+    "city": "North York",
+    "state": "Ontario",
+    "country": "Canada"
+  },
+  {
+    "number": 1833,
+    "key": "frc1833",
+    "name": "Team BEAN",
+    "city": "Cumming",
+    "state": "Georgia",
+    "country": "USA"
+  },
+  {
+    "number": 179,
+    "key": "frc179",
+    "name": "Children of the Swamp",
+    "city": "Riviera Beach",
+    "state": "Florida",
+    "country": "USA"
+  },
+  {
+    "number": 581,
+    "key": "frc581",
+    "name": "Blazing Bulldogs",
+    "city": "San Jose",
+    "state": "California",
+    "country": "USA"
+  },
+  {
+    "number": 5468,
+    "key": "frc5468",
+    "name": "Chaos Theory",
+    "city": "Bend",
+    "state": "Oregon",
+    "country": "USA"
+  },
+  {
+    "number": 3847,
+    "key": "frc3847",
+    "name": "Spectrum   -△◅",
+    "city": "Houston",
+    "state": "Texas",
+    "country": "USA"
+  },
+  {
+    "number": 4613,
+    "key": "frc4613",
+    "name": "Barker Redbacks",
+    "city": "Sydney",
+    "state": "New South Wales",
+    "country": "Australia"
+  },
+  {
+    "number": 6369,
+    "key": "frc6369",
+    "name": "Mercenary Robotics",
+    "city": "McKinney",
+    "state": "Texas",
+    "country": "USA"
+  },
+  {
+    "number": 8033,
+    "key": "frc8033",
+    "name": "Highlander Robotics",
+    "city": "Piedmont",
+    "state": "California",
+    "country": "USA"
+  },
+  {
+    "number": 2337,
+    "key": "frc2337",
+    "name": "EngiNERDs",
+    "city": "Grand Blanc",
+    "state": "Michigan",
+    "country": "USA"
+  },
+  {
+    "number": 930,
+    "key": "frc930",
+    "name": "Mukwonago BEARs",
+    "city": "Mukwonago",
+    "state": "Wisconsin",
+    "country": "USA"
+  },
+  {
+    "number": 1241,
+    "key": "frc1241",
+    "name": "THEORY6",
+    "city": "Mississauga",
+    "state": "Ontario",
+    "country": "Canada"
+  },
+  {
+    "number": 195,
+    "key": "frc195",
+    "name": "CyberKnights",
+    "city": "Southington",
+    "state": "Connecticut",
+    "country": "USA"
+  },
+  {
+    "number": 180,
+    "key": "frc180",
+    "name": "S.P.A.M.",
+    "city": "Stuart",
+    "state": "Florida",
+    "country": "USA"
+  },
+  {
+    "number": 498,
+    "key": "frc498",
+    "name": "The Cobra Commanders",
+    "city": "Glendale",
+    "state": "Arizona",
+    "country": "USA"
+  },
+  {
+    "number": 4028,
+    "key": "frc4028",
+    "name": "The Beak Squad",
+    "city": "Cincinnati",
+    "state": "Ohio",
+    "country": "USA"
+  },
+  {
+    "number": 340,
+    "key": "frc340",
+    "name": "G.R.R. (Greater Rochester Robotics)",
+    "city": "Churchville",
+    "state": "New York",
+    "country": "USA"
+  },
+  {
+    "number": 971,
+    "key": "frc971",
+    "name": "Spartan Robotics",
+    "city": "Mountain View",
+    "state": "California",
+    "country": "USA"
+  },
+  {
+    "number": 8,
+    "key": "frc8",
+    "name": "Paly Robotics",
+    "city": "Palo Alto",
+    "state": "California",
+    "country": "USA"
+  },
+  {
+    "number": 4522,
+    "key": "frc4522",
+    "name": "Team SCREAM",
+    "city": "Sedalia",
+    "state": "Missouri",
+    "country": "USA"
+  },
+  {
+    "number": 5907,
+    "key": "frc5907",
+    "name": "CC Shambots",
+    "city": "Novi",
+    "state": "Michigan",
+    "country": "USA"
+  },
+  {
+    "number": 4907,
+    "key": "frc4907",
+    "name": "Thunderstamps",
+    "city": "St. Thomas",
+    "state": "Ontario",
+    "country": "Canada"
+  },
+  {
+    "number": 3990,
+    "key": "frc3990",
+    "name": "Tech for Kids",
+    "city": "Montreal",
+    "state": "Québec",
+    "country": "Canada"
+  },
+  {
+    "number": 59,
+    "key": "frc59",
+    "name": "RamTech",
+    "city": "Miami",
+    "state": "Florida",
+    "country": "USA"
+  },
+  {
+    "number": 9408,
+    "key": "frc9408",
+    "name": "Warren Warbots",
+    "city": "Downey",
+    "state": "California",
+    "country": "USA"
+  },
+  {
+    "number": 2200,
+    "key": "frc2200",
+    "name": "BCR Blackout",
+    "city": "Burlington",
+    "state": "Ontario",
+    "country": "Canada"
+  },
+  {
+    "number": 341,
+    "key": "frc341",
+    "name": "Miss Daisy",
+    "city": "Ambler",
+    "state": "Pennsylvania",
+    "country": "USA"
+  },
+  {
+    "number": 7028,
+    "key": "frc7028",
+    "name": "Binary Battalion",
+    "city": "Saint Michael",
+    "state": "Minnesota",
+    "country": "USA"
+  },
+  {
+    "number": 176,
+    "key": "frc176",
+    "name": "Aces High",
+    "city": "Windsor Locks",
+    "state": "Connecticut",
+    "country": "USA"
+  },
+  {
+    "number": 1538,
+    "key": "frc1538",
+    "name": "The Holy Cows",
+    "city": "San Diego",
+    "state": "California",
+    "country": "USA"
+  },
+  {
+    "number": 316,
+    "key": "frc316",
+    "name": "LUNATECS",
+    "city": "Carneys Point",
+    "state": "New Jersey",
+    "country": "USA"
+  },
+  {
+    "number": 1756,
+    "key": "frc1756",
+    "name": "Argos",
+    "city": "Peoria",
+    "state": "Illinois",
+    "country": "USA"
+  },
+  {
+    "number": 1986,
+    "key": "frc1986",
+    "name": "Team Titanium",
+    "city": "Lees Summit",
+    "state": "Missouri",
+    "country": "USA"
+  },
+  {
+    "number": 7407,
+    "key": "frc7407",
+    "name": "Wired Boars",
+    "city": "Wallingford",
+    "state": "Connecticut",
+    "country": "USA"
+  },
+  {
+    "number": 2767,
+    "key": "frc2767",
+    "name": "Stryke Force",
+    "city": "Kalamazoo",
+    "state": "Michigan",
+    "country": "USA"
+  },
+  {
+    "number": 987,
+    "key": "frc987",
+    "name": "HIGHROLLERS",
+    "city": "Las Vegas",
+    "state": "Nevada",
+    "country": "USA"
+  },
+  {
+    "number": 972,
+    "key": "frc972",
+    "name": "Iron Claw",
+    "city": "Los Gatos",
+    "state": "California",
+    "country": "USA"
+  },
+  {
+    "number": 3128,
+    "key": "frc3128",
+    "name": "The Aluminum Narwhals",
+    "city": "San Diego",
+    "state": "California",
+    "country": "USA"
+  },
+  {
+    "number": 1540,
+    "key": "frc1540",
+    "name": "Flaming Chickens",
+    "city": "Portland",
+    "state": "Oregon",
+    "country": "USA"
+  },
+  {
+    "number": 1477,
+    "key": "frc1477",
+    "name": "Texas Torque",
+    "city": "Conroe",
+    "state": "Texas",
+    "country": "USA"
+  },
+  {
+    "number": 233,
+    "key": "frc233",
+    "name": "The Pink Team",
+    "city": "Rockledge",
+    "state": "Florida",
+    "country": "USA"
+  },
+  {
+    "number": 131,
+    "key": "frc131",
+    "name": "CHAOS",
+    "city": "Manchester",
+    "state": "New Hampshire",
+    "country": "USA"
+  },
+  {
+    "number": 3005,
+    "key": "frc3005",
+    "name": "RoboChargers",
+    "city": "Dallas",
+    "state": "Texas",
+    "country": "USA"
+  },
+  {
+    "number": 6036,
+    "key": "frc6036",
+    "name": "Peninsula Robotics",
+    "city": "Palo Alto",
+    "state": "California",
+    "country": "USA"
+  },
+  {
+    "number": 1619,
+    "key": "frc1619",
+    "name": "Up-A-Creek Robotics",
+    "city": "Longmont",
+    "state": "Colorado",
+    "country": "USA"
+  },
+  {
+    "number": 3478,
+    "key": "frc3478",
+    "name": "PrepaTec - LamBot",
+    "city": "San Luis Potosí",
+    "state": "San Luis Potosí",
+    "country": "Mexico"
+  },
+  {
+    "number": 1577,
+    "key": "frc1577",
+    "name": "Steampunk",
+    "city": "Raanana",
+    "state": "HaMerkaz",
+    "country": "Israel"
+  },
+  {
+    "number": 3006,
+    "key": "frc3006",
+    "name": "Red Rock Robotics",
+    "city": "Salt Lake City",
+    "state": "Utah",
+    "country": "USA"
+  },
+  {
+    "number": 3683,
+    "key": "frc3683",
+    "name": "Team DAVE",
+    "city": "Waterloo",
+    "state": "Ontario",
+    "country": "Canada"
+  },
+  {
+    "number": 114,
+    "key": "frc114",
+    "name": "Eaglestrike",
+    "city": "Los Altos",
+    "state": "California",
+    "country": "USA"
+  },
+  {
+    "number": 469,
+    "key": "frc469",
+    "name": "Las Guerrillas",
+    "city": "Pontiac",
+    "state": "Michigan",
+    "country": "USA"
+  },
+  {
+    "number": 5199,
+    "key": "frc5199",
+    "name": "Robot Dolphins From Outer Space",
+    "city": "Mission Viejo",
+    "state": "California",
+    "country": "USA"
+  },
+  {
+    "number": 1771,
+    "key": "frc1771",
+    "name": "North Gwinnett Robotics",
+    "city": "Suwanee",
+    "state": "Georgia",
+    "country": "USA"
+  },
+  {
+    "number": 88,
+    "key": "frc88",
+    "name": "TJ²",
+    "city": "Bridgewater",
+    "state": "Massachusetts",
+    "country": "USA"
+  },
+  {
+    "number": 4099,
+    "key": "frc4099",
+    "name": "The Falcons",
+    "city": "Poolesville",
+    "state": "Maryland",
+    "country": "USA"
+  },
+  {
+    "number": 5813,
+    "key": "frc5813",
+    "name": "Morpheus",
+    "city": "Concord",
+    "state": "New Hampshire",
+    "country": "USA"
+  },
+  {
+    "number": 6995,
+    "key": "frc6995",
+    "name": "NOMAD",
+    "city": "Escondido",
+    "state": "California",
+    "country": "USA"
+  },
+  {
+    "number": 870,
+    "key": "frc870",
+    "name": "TEAM  R. I. C. E.",
+    "city": "Southold",
+    "state": "New York",
+    "country": "USA"
+  },
+  {
+    "number": 4488,
+    "key": "frc4488",
+    "name": "Shockwave",
+    "city": "Hillsboro",
+    "state": "Oregon",
+    "country": "USA"
+  },
+  {
+    "number": 461,
+    "key": "frc461",
+    "name": "Westside Boiler Invasion",
+    "city": "West Lafayette",
+    "state": "Indiana",
+    "country": "USA"
+  },
+  {
+    "number": 599,
+    "key": "frc599",
+    "name": "The Robodox",
+    "city": "Granada Hills",
+    "state": "California",
+    "country": "USA"
+  },
+  {
+    "number": 3339,
+    "key": "frc3339",
+    "name": "BumbleB",
+    "city": "Kfar Yona",
+    "state": "HaMerkaz",
+    "country": "Israel"
+  },
+  {
+    "number": 1732,
+    "key": "frc1732",
+    "name": "Hilltopper Robotics",
+    "city": "Milwaukee",
+    "state": "Wisconsin",
+    "country": "USA"
+  },
+  {
+    "number": 4678,
+    "key": "frc4678",
+    "name": "CyberCavs",
+    "city": "Breslau",
+    "state": "Ontario",
+    "country": "Canada"
+  },
+  {
+    "number": 818,
+    "key": "frc818",
+    "name": "The Steel Armadillos",
+    "city": "Warren",
+    "state": "Michigan",
+    "country": "USA"
+  },
+  {
+    "number": 610,
+    "key": "frc610",
+    "name": "Crescent Coyotes",
+    "city": "Toronto",
+    "state": "Ontario",
+    "country": "Canada"
+  },
+  {
+    "number": 2075,
+    "key": "frc2075",
+    "name": "Enigma Robotics",
+    "city": "Grand Rapids",
+    "state": "Michigan",
+    "country": "USA"
+  },
+  {
+    "number": 1706,
+    "key": "frc1706",
+    "name": "Ratchet Rockers",
+    "city": "Wentzville",
+    "state": "Missouri",
+    "country": "USA"
+  },
+  {
+    "number": 2231,
+    "key": "frc2231",
+    "name": "OnyxTronix",
+    "city": "Shoham",
+    "state": "HaMerkaz",
+    "country": "Israel"
+  },
+  {
+    "number": 3310,
+    "key": "frc3310",
+    "name": "Black Hawk Robotics",
+    "city": "Heath",
+    "state": "Texas",
+    "country": "USA"
+  },
+  {
+    "number": 7157,
+    "key": "frc7157",
+    "name": "μBotics",
+    "city": "Brea",
+    "state": "California",
+    "country": "USA"
+  },
+  {
+    "number": 25,
+    "key": "frc25",
+    "name": "Raider Robotix",
+    "city": "North Brunswick",
+    "state": "New Jersey",
+    "country": "USA"
+  },
+  {
+    "number": 2122,
+    "key": "frc2122",
+    "name": "Team Tators",
+    "city": "Boise",
+    "state": "Idaho",
+    "country": "USA"
+  },
+  {
+    "number": 2468,
+    "key": "frc2468",
+    "name": "Team Appreciate",
+    "city": "Austin",
+    "state": "Texas",
+    "country": "USA"
+  },
+  {
+    "number": 2714,
+    "key": "frc2714",
+    "name": "♨️ BBQ ♨️",
+    "city": "Dallas",
+    "state": "Texas",
+    "country": "USA"
+  },
+  {
+    "number": 3647,
+    "key": "frc3647",
+    "name": "Millennium Falcons",
+    "city": "San Diego",
+    "state": "California",
+    "country": "USA"
+  },
+  {
+    "number": 4270,
+    "key": "frc4270",
+    "name": "Crusaders",
+    "city": "Honolulu",
+    "state": "Hawaii",
+    "country": "USA"
+  },
+  {
+    "number": 4476,
+    "key": "frc4476",
+    "name": "W.A.F.F.L.E.S.",
+    "city": "Kingston",
+    "state": "Ontario",
+    "country": "Canada"
+  },
+  {
+    "number": 4499,
+    "key": "frc4499",
+    "name": "The Highlanders",
+    "city": "Fort Collins",
+    "state": "Colorado",
+    "country": "USA"
+  },
+  {
+    "number": 16,
+    "key": "frc16",
+    "name": "Bomb Squad",
+    "city": "Mountain Home",
+    "state": "Arkansas",
+    "country": "USA"
+  }
+];
