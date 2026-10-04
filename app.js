@@ -392,13 +392,13 @@ function extractDirectImageUrl(mediaList) {
     if (m.type === 'imgur') {
       url = optimizeImageUrl(m.direct_url, m.foreign_key);
     } else if (m.type === 'cd-thread' || m.type === 'cdphotothread') {
-      const cdUrl = m.details?.image_url || m.direct_url;
-      if (cdUrl) {
+      const cdUrl = m.details?.image_url;
+      if (cdUrl && !cdUrl.includes('/t/')) {
         url = cdUrl.startsWith('http://') ? 'https://' + cdUrl.slice(7) : cdUrl;
       }
     } else if (m.direct_url) {
       const d = m.direct_url.toLowerCase();
-      if (!d.includes('instagram.com') && !d.includes('youtube.com') && !d.includes('onshape.com')) {
+      if (!d.includes('instagram.com') && !d.includes('youtube.com') && !d.includes('onshape.com') && !d.includes('/t/')) {
         url = optimizeImageUrl(m.direct_url, null);
       }
     }
@@ -406,7 +406,7 @@ function extractDirectImageUrl(mediaList) {
     if (url) {
       const cleanUrl = url.trim();
       const isImgur = cleanUrl.includes('i.imgur.com');
-      const isCD = cleanUrl.includes('chiefdelphi.com');
+      const isCD = cleanUrl.includes('chiefdelphi.com') && (cleanUrl.includes('/uploads/') || cleanUrl.includes('/media/img/') || /\.(jpeg|jpg|png|webp|gif)/i.test(cleanUrl)) && !cleanUrl.includes('/t/');
       const hasImgExt = /\.(jpeg|jpg|png|webp|gif)($|\?)/i.test(cleanUrl);
 
       if (isImgur || isCD || hasImgExt) {
@@ -533,32 +533,29 @@ async function getNextQuestion(session = state.quizSession) {
     // 1. Gather all verified teams not yet asked this cycle
     let available = state.verifiedPhotoPool.filter(t => !state.usedTeamKeys.has(t.key));
 
-    // 2. If all verified teams have been used, reset used keys for endless quiz
-    if (available.length === 0 && state.verifiedPhotoPool.length > 0) {
-      state.usedTeamKeys.clear();
-      available = [...state.verifiedPhotoPool];
-    }
-
-    // 3. If verified photo pool is still small/empty, scan more candidates
+    // 2. If no available verified teams, scan any remaining unchecked teams in the pool first!
     if (available.length === 0) {
-      const unchecked = pool.filter(t => !(`${year}_${t.key}` in state.imageCache)).sort(() => Math.random() - 0.5);
-      for (let i = 0; i < unchecked.length && available.length === 0 && i < 30; i += 6) {
-        const batch = unchecked.slice(i, i + 6);
-        await Promise.all(
-          batch.map(async t => {
-            const url = await fetchRobotImage(t.key, year);
-            if (state.quizSession !== session) return;
-            if (url && !state.verifiedPhotoPool.some(v => v.key === t.key)) {
-              state.verifiedPhotoPool.push(t);
-            }
-          })
-        );
-        if (state.quizSession !== session) break;
-        available = state.verifiedPhotoPool.filter(t => !state.usedTeamKeys.has(t.key));
+      const unchecked = pool.filter(t => !(`${year}_${t.key}` in state.imageCache));
+      if (unchecked.length > 0) {
+        for (let i = 0; i < unchecked.length && available.length === 0; i += 12) {
+          const batch = unchecked.slice(i, i + 12);
+          await Promise.all(
+            batch.map(async t => {
+              const url = await fetchRobotImage(t.key, year);
+              if (state.quizSession !== session) return;
+              if (url && !state.verifiedPhotoPool.some(v => v.key === t.key)) {
+                state.verifiedPhotoPool.push(t);
+              }
+            })
+          );
+          if (state.quizSession !== session) break;
+          available = state.verifiedPhotoPool.filter(t => !state.usedTeamKeys.has(t.key));
+        }
       }
     }
 
-    // 4. Fallback reset if pool exists
+    // 3. ONLY when all teams in the pool have been scanned AND all verified teams have been asked,
+    // reset used keys for an endless loop across all verified teams
     if (available.length === 0 && state.verifiedPhotoPool.length > 0) {
       state.usedTeamKeys.clear();
       available = [...state.verifiedPhotoPool];
@@ -1153,24 +1150,23 @@ async function startQuiz() {
         }
       });
 
-      // If we don't have at least 6 verified teams yet, scan initial candidates in parallel
-      if (state.verifiedPhotoPool.length < 6) {
-        const unchecked = state.teamPool.filter(t => !(`${year}_${t.key}` in state.imageCache));
-        const candidates = [...unchecked].sort(() => Math.random() - 0.5);
+      // When the pool is relatively small (<= 80 teams, e.g. regional events or states),
+      // scan ALL teams in the pool upfront so every single robot with a photo in that event is found!
+      const unchecked = state.teamPool.filter(t => !(`${year}_${t.key}` in state.imageCache));
+      const targetCount = state.teamPool.length <= 80 ? unchecked.length : Math.max(20, Math.ceil(state.teamPool.length * 0.4));
 
-        for (let i = 0; i < candidates.length && state.verifiedPhotoPool.length < 6 && i < 40; i += 8) {
-          const batch = candidates.slice(i, i + 8);
-          await Promise.all(
-            batch.map(async t => {
-              const url = await fetchRobotImage(t.key, year);
-              if (session !== state.quizSession) return;
-              if (url && !state.verifiedPhotoPool.some(v => v.key === t.key)) {
-                state.verifiedPhotoPool.push(t);
-              }
-            })
-          );
-          if (session !== state.quizSession) return;
-        }
+      for (let i = 0; i < unchecked.length && (state.teamPool.length <= 80 || state.verifiedPhotoPool.length < targetCount); i += 12) {
+        const batch = unchecked.slice(i, i + 12);
+        await Promise.all(
+          batch.map(async t => {
+            const url = await fetchRobotImage(t.key, year);
+            if (session !== state.quizSession) return;
+            if (url && !state.verifiedPhotoPool.some(v => v.key === t.key)) {
+              state.verifiedPhotoPool.push(t);
+            }
+          })
+        );
+        if (session !== state.quizSession) return;
       }
 
       if (state.verifiedPhotoPool.length === 0) {
