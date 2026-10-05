@@ -1,336 +1,452 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>FRC Quiz — Test Your Robot Knowledge</title>
-  <meta name="description" content="Test your FIRST Robotics Competition knowledge — identify teams by their robot number and image." />
+  <title>frcq</title>
+  <meta name="description"
+    content="Test your FIRST Robotics Competition knowledge — identify teams by their robot number and image." />
   <link rel="stylesheet" href="styles.css" />
 </head>
+
 <body>
 
-<!-- ── Header ─────────────────────────────────────────────── -->
-<header>
-  <div class="header-inner">
-    <div class="logo" id="logo-link">
-      <div class="logo-icon">FRC</div>
-      <span class="logo-text">FRC<span>Quiz</span></span>
-    </div>
-    <div class="header-actions">
-      <button class="btn btn-ghost" id="nav-home">Home</button>
-      <button class="btn btn-ghost" id="nav-settings">Settings</button>
-    </div>
-  </div>
-</header>
-
-<!-- ── Main wrapper ────────────────────────────────────────── -->
-<main style="display:flex;justify-content:center;width:100%">
-
-  <!-- ── Home Page ──────────────────────────────────────────── -->
-  <div class="page container" id="page-home">
-    <div class="hero">
-      <div class="hero-badge">FIRST Robotics Competition</div>
-      <h1>Can you name<br><span>that robot?</span></h1>
-      <p>
-        See a robot number (and photo if available), then guess which
-        FRC team it belongs to. Data powered by The Blue Alliance &amp; Statbotics.
-      </p>
-      <div class="home-actions">
-        <button class="btn btn-primary btn-lg" id="start-btn">Start Quiz</button>
-        <button class="btn btn-ghost btn-lg" id="settings-link">Settings</button>
+  <!-- ── Header ─────────────────────────────────────────────── -->
+  <header>
+    <div class="header-inner">
+      <div class="logo" id="logo-link">
+        <span class="logo-title">frcq</span>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-ghost" id="nav-home">Home</button>
+        <button class="btn btn-ghost" id="nav-settings">Settings</button>
       </div>
     </div>
+  </header>
 
-    <div class="stats-row">
-      <div class="stat-card">
-        <div class="stat-value" id="stat-sessions">0</div>
-        <div class="stat-label">Sessions played</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-value" id="stat-best">—</div>
-        <div class="stat-label">Best score</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-value" id="stat-year">2026</div>
-        <div class="stat-label">Current season</div>
-      </div>
-    </div>
+  <!-- ── Main wrapper ────────────────────────────────────────── -->
+  <main style="display:flex;justify-content:center;width:100%">
 
-    <div class="card" style="margin-top:0">
-      <p style="font-size:0.85rem;color:var(--text-sub);line-height:1.7;margin-bottom:16px">
-        <strong style="color:var(--text)">How to play:</strong> Each question shows you a robot number
-        and (when available) a photo of that robot. Pick the correct team from four choices.
-        Use <strong style="color:var(--text)">Settings</strong> to quiz on top teams, random teams,
-        or teams from a specific FRC district.
-      </p>
-      <button class="btn btn-primary" id="start-btn-2">Start Quiz</button>
-    </div>
-  </div>
+    <!-- ── Home Page ──────────────────────────────────────────── -->
+    <div class="page container" id="page-home">
+      <div class="home-simple">
+        <div class="home-start-wrapper">
+          <button class="btn btn-primary btn-lg start-quiz-main-btn" id="start-btn">Start Quiz</button>
+        </div>
 
-  <!-- ── Quiz Page ──────────────────────────────────────────── -->
-  <div class="page container" id="page-quiz">
-
-    <!-- Loading -->
-    <div class="loading-overlay" id="quiz-loading">
-      <div class="spinner"></div>
-      <div class="loading-text" id="quiz-loading-text">Fetching teams from The Blue Alliance…</div>
-    </div>
-
-    <!-- Content -->
-    <div id="quiz-content">
-      <div class="quiz-header">
-        <span class="quiz-progress-text" id="quiz-progress">Question #1</span>
-        <div style="display:flex;gap:8px;align-items:center">
-          <span class="score-badge" id="quiz-score">Score <span>0</span>/0</span>
-          <button class="btn btn-ghost" id="finish-btn" style="padding:6px 14px;font-size:0.82rem;border-color:rgba(239,68,68,0.4);color:#fca5a5">Finish Quiz</button>
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-value" id="stat-sessions">0</div>
+            <div class="stat-label">Sessions played</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="stat-best">—</div>
+            <div class="stat-label">Best score</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="stat-year">2026</div>
+            <div class="stat-label">Current season</div>
+          </div>
         </div>
       </div>
+    </div>
 
-      <!-- Robot card -->
-      <div class="robot-card">
-        <div class="robot-image-wrap" id="robot-image-wrap">
-          <div class="robot-image-placeholder">
-            <div class="icon">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+    <!-- ── Quiz Page ──────────────────────────────────────────── -->
+    <div class="page container" id="page-quiz">
+
+      <!-- Loading -->
+      <div class="loading-overlay" id="quiz-loading">
+        <div class="spinner"></div>
+        <div class="loading-text" id="quiz-loading-text">Fetching teams from The Blue Alliance…</div>
+      </div>
+
+      <!-- Content -->
+      <div id="quiz-content">
+        <div class="quiz-header">
+          <span class="quiz-progress-text" id="quiz-progress">Question #1</span>
+          <div style="display:flex;gap:8px;align-items:center">
+            <span class="score-badge" id="quiz-score">Score <span>0</span>/0</span>
+            <button class="btn btn-ghost" id="finish-btn"
+              style="padding:6px 14px;font-size:0.82rem;border-color:rgba(239,68,68,0.4);color:#fca5a5">Finish
+              Quiz</button>
+          </div>
+        </div>
+
+        <!-- Robot card -->
+        <div class="robot-card">
+          <div class="robot-image-wrap" id="robot-image-wrap">
+            <div class="robot-image-placeholder">
+              <div class="icon">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2" />
+                  <circle cx="8.5" cy="8.5" r="1.5" />
+                  <path d="M21 15l-5-5L5 21" />
+                </svg>
+              </div>
+              <div>Loading…</div>
             </div>
-            <div>Loading…</div>
+          </div>
+          <div class="robot-info">
+            <div class="robot-number-tag" id="robot-number">#0000</div>
+            <div class="robot-meta">
+              <div class="robot-question" id="robot-question">Which team is this robot from?</div>
+            </div>
           </div>
         </div>
-        <div class="robot-info">
-          <div class="robot-number-tag" id="robot-number">#0000</div>
-          <div class="robot-meta">
-            <div class="robot-question" id="robot-question">Which team is this robot from?</div>
-          </div>
+
+        <!-- Feedback -->
+        <div class="feedback-banner" id="feedback-banner"></div>
+
+        <!-- Choices -->
+        <div class="choices-grid" id="choices-grid"></div>
+
+        <!-- Next -->
+        <div style="display:flex;justify-content:flex-end;margin-top:12px">
+          <button class="btn btn-primary" id="next-btn" style="display:none;padding:12px 24px;font-size:0.95rem">Next
+            Question →</button>
         </div>
       </div>
-
-      <!-- Feedback -->
-      <div class="feedback-banner" id="feedback-banner"></div>
-
-      <!-- Choices -->
-      <div class="choices-grid" id="choices-grid"></div>
-
-      <!-- Next -->
-      <div style="display:flex;justify-content:flex-end;margin-top:12px">
-        <button class="btn btn-primary" id="next-btn" style="display:none;padding:12px 24px;font-size:0.95rem">Next Question →</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── Results Page ────────────────────────────────────────── -->
-  <div class="page container" id="page-results">
-    <div class="results-hero">
-      <div class="results-score-ring" id="results-ring">
-        <span class="results-score-text" id="results-score-text">0/0</span>
-      </div>
-      <h2 class="results-title" id="results-title">Results</h2>
-      <p class="results-sub" id="results-sub"></p>
     </div>
 
-    <div class="results-breakdown">
-      <div class="breakdown-item good">
-        <div class="breakdown-val" id="breakdown-correct">0</div>
-        <div class="breakdown-lbl">Correct</div>
-      </div>
-      <div class="breakdown-item bad">
-        <div class="breakdown-val" id="breakdown-wrong">0</div>
-        <div class="breakdown-lbl">Wrong</div>
-      </div>
-      <div class="breakdown-item">
-        <div class="breakdown-val" id="breakdown-pct">0%</div>
-        <div class="breakdown-lbl">Accuracy</div>
-      </div>
-    </div>
-
-    <div class="review-list" id="review-list"></div>
-
-    <div class="results-actions">
-      <button class="btn btn-primary btn-lg" id="play-again-btn">Play Again</button>
-      <button class="btn btn-ghost btn-lg" id="home-btn">Home</button>
-    </div>
-  </div>
-
-  <!-- ── Settings Page ──────────────────────────────────────── -->
-  <div class="page container" id="page-settings">
-    <h2 style="font-size:1.4rem;font-weight:700;margin-bottom:4px;padding-top:32px">Settings</h2>
-    <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:28px">Customise your quiz experience.</p>
-
-    <!-- API notice -->
-    <div class="api-key-notice" id="api-notice">
-      <span>Set your TBA API key below or in <strong>config.js</strong> before playing.
-      Get one free at <a href="https://www.thebluealliance.com/account" target="_blank" style="color:var(--warn)">thebluealliance.com/account</a>.</span>
-    </div>
-
-    <!-- API Key Section -->
-    <div class="settings-section">
-      <div class="settings-label">API Configuration</div>
-      <div class="setting-row">
-        <div class="setting-info">
-          <div class="setting-name">TBA API Key</div>
-          <div class="setting-desc">The Blue Alliance Read API Key</div>
+    <!-- ── Results Page ────────────────────────────────────────── -->
+    <div class="page container" id="page-results">
+      <div class="results-hero">
+        <div class="results-score-ring" id="results-ring">
+          <span class="results-score-text" id="results-score-text">0/0</span>
         </div>
-        <input type="password" class="setting-input" id="tba-api-input" placeholder="Paste TBA API Key..." style="width:240px" />
+        <h2 class="results-title" id="results-title">Results</h2>
+        <p class="results-sub" id="results-sub"></p>
       </div>
-    </div>
 
-    <!-- Team pool mode -->
-    <div class="settings-section">
-      <div class="settings-label">Team Pool</div>
-
-      <div class="setting-row">
-        <div class="setting-info">
-          <div class="setting-name">Quiz Mode</div>
-          <div class="setting-desc">Where teams are drawn from</div>
+      <div class="results-breakdown">
+        <div class="breakdown-item good">
+          <div class="breakdown-val" id="breakdown-correct">0</div>
+          <div class="breakdown-lbl">Correct</div>
         </div>
-        <div class="radio-group">
-          <div class="radio-pill">
-            <input type="radio" name="mode" id="mode-popular" value="popular" checked />
-            <label for="mode-popular">Popular Teams</label>
-          </div>
-          <div class="radio-pill">
-            <input type="radio" name="mode" id="mode-top" value="top" />
-            <label for="mode-top">Top Teams</label>
-          </div>
-          <div class="radio-pill">
-            <input type="radio" name="mode" id="mode-random" value="random" />
-            <label for="mode-random">All Teams</label>
-          </div>
-          <div class="radio-pill">
-            <input type="radio" name="mode" id="mode-state" value="state" />
-            <label for="mode-state">By State</label>
-          </div>
-          <div class="radio-pill">
-            <input type="radio" name="mode" id="mode-event" value="event" />
-            <label for="mode-event">By Regional / Event</label>
-          </div>
+        <div class="breakdown-item bad">
+          <div class="breakdown-val" id="breakdown-wrong">0</div>
+          <div class="breakdown-lbl">Wrong</div>
+        </div>
+        <div class="breakdown-item">
+          <div class="breakdown-val" id="breakdown-pct">0%</div>
+          <div class="breakdown-lbl">Accuracy</div>
         </div>
       </div>
 
-      <!-- Top Teams count selector (shown only when mode=top) -->
-      <div class="region-picker" id="top-count-picker">
+      <div class="review-list" id="review-list"></div>
+
+      <div class="results-actions">
+        <button class="btn btn-primary btn-lg" id="play-again-btn">Play Again</button>
+        <button class="btn btn-ghost btn-lg" id="home-btn">Home</button>
+      </div>
+    </div>
+
+    <!-- ── Settings Page ──────────────────────────────────────── -->
+    <div class="page container" id="page-settings">
+      <h2 style="font-size:1.4rem;font-weight:700;margin-bottom:4px;padding-top:32px">Settings</h2>
+      <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:28px">Customise your quiz and website
+        appearance.</p>
+
+      <!-- Appearance & Theme Section -->
+      <div class="settings-section">
+        <div class="settings-label">Appearance &amp; Theme</div>
+
+        <!-- Dark / Light mode -->
         <div class="setting-row">
           <div class="setting-info">
-            <div class="setting-name">Top Teams Limit</div>
-            <div class="setting-desc">Choose pool size of highest-ranked teams</div>
+            <div class="setting-name">Theme Mode</div>
+            <div class="setting-desc">Switch between dark mode and light mode</div>
           </div>
-          <select class="setting-select" id="top-count-select">
-            <option value="50">Top 50 (World Champions &amp; Einstein Finalists)</option>
-            <option value="100" selected>Top 100 (World Championship Alliances)</option>
-            <option value="250">Top 250 (Championship Playoff Contenders)</option>
-            <option value="500">Top 500 (World Championship Division Teams)</option>
-            <option value="1000">Top 1000 (Championship &amp; DCMP Teams)</option>
+          <div class="radio-group">
+            <div class="radio-pill">
+              <input type="radio" name="theme-mode" id="theme-dark" value="dark" checked />
+              <label for="theme-dark">Dark Mode</label>
+            </div>
+            <div class="radio-pill">
+              <input type="radio" name="theme-mode" id="theme-light" value="light" />
+              <label for="theme-light">Light Mode</label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Outlines toggle -->
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-name">Remove Outlines</div>
+            <div class="setting-desc">Remove borders and outlines around all page elements</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="no-outlines-toggle" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <!-- Button color theme -->
+        <div class="setting-row" style="flex-direction:column;align-items:stretch;gap:12px">
+          <div class="setting-info">
+            <div class="setting-name">Main Button Theme</div>
+            <div class="setting-desc">Choose a color for buttons and accents</div>
+          </div>
+          <div class="color-picker-wrap">
+            <div class="color-swatches" id="color-swatches">
+              <button type="button" class="color-swatch active" data-color="#2563eb" style="background:#2563eb"
+                title="Classic Blue"></button>
+              <button type="button" class="color-swatch" data-color="#4f46e5" style="background:#4f46e5"
+                title="Indigo"></button>
+              <button type="button" class="color-swatch" data-color="#9333ea" style="background:#9333ea"
+                title="Purple"></button>
+              <button type="button" class="color-swatch" data-color="#059669" style="background:#059669"
+                title="Emerald"></button>
+              <button type="button" class="color-swatch" data-color="#dc2626" style="background:#dc2626"
+                title="Crimson"></button>
+              <button type="button" class="color-swatch" data-color="#ea580c" style="background:#ea580c"
+                title="Orange"></button>
+              <button type="button" class="color-swatch" data-color="#db2777" style="background:#db2777"
+                title="Pink"></button>
+              <button type="button" class="color-swatch" data-color="#0891b2" style="background:#0891b2"
+                title="Cyan"></button>
+            </div>
+            <div class="custom-color-input-wrap">
+              <label for="custom-color-picker" style="font-size:0.8rem;color:var(--text-sub)">Custom:</label>
+              <input type="color" id="custom-color-picker" value="#2563eb" class="custom-color-picker" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- API notice -->
+      <div class="api-key-notice" id="api-notice">
+        <span>Set your TBA API key below or in <strong>config.js</strong> before playing, or use Statbotics Only mode.
+          Get a free key at <a href="https://www.thebluealliance.com/account" target="_blank"
+            style="color:var(--warn)">thebluealliance.com/account</a>.</span>
+      </div>
+
+      <!-- API Key Section -->
+      <div class="settings-section">
+        <div class="settings-label">API Configuration</div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-name">Statbotics Only Mode</div>
+            <div class="setting-desc">Play without TBA key (public Statbotics data; text-only, no robot photos)</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="statbotics-only-toggle" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-row" id="tba-key-row">
+          <div class="setting-info">
+            <div class="setting-name">TBA API Key</div>
+            <div class="setting-desc">The Blue Alliance Read API Key (enables robot photos &amp; live rosters)</div>
+          </div>
+          <input type="password" class="setting-input" id="tba-api-input" placeholder="Paste TBA API Key..."
+            style="width:240px" />
+        </div>
+      </div>
+
+      <!-- Team pool mode -->
+      <div class="settings-section">
+        <div class="settings-label">Team Pool</div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-name">Quiz Mode</div>
+            <div class="setting-desc">Where teams are drawn from</div>
+          </div>
+          <div class="radio-group">
+            <div class="radio-pill">
+              <input type="radio" name="mode" id="mode-popular" value="popular" checked />
+              <label for="mode-popular">Popular Teams</label>
+            </div>
+            <div class="radio-pill">
+              <input type="radio" name="mode" id="mode-top" value="top" />
+              <label for="mode-top">Top Teams</label>
+            </div>
+            <div class="radio-pill">
+              <input type="radio" name="mode" id="mode-random" value="random" />
+              <label for="mode-random">All Teams</label>
+            </div>
+            <div class="radio-pill">
+              <input type="radio" name="mode" id="mode-state" value="state" />
+              <label for="mode-state">By State</label>
+            </div>
+            <div class="radio-pill">
+              <input type="radio" name="mode" id="mode-event" value="event" />
+              <label for="mode-event">By Regional / Event</label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Popular Teams notice (shown only when mode=popular) -->
+        <div class="region-picker" id="popular-notice">
+          <div class="setting-row">
+            <div class="setting-info" style="max-width: 100%;">
+              <div class="setting-name">Data Source</div>
+              <div class="setting-desc">this list is pulled from <a href="https://frcmash.com" target="_blank"
+                  style="color:var(--accent);text-decoration:underline;">frcmash.com</a>'s popular teams list.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Top Teams count selector (shown only when mode=top) -->
+        <div class="region-picker" id="top-count-picker">
+          <div class="setting-row">
+            <div class="setting-info">
+              <div class="setting-name">Top Teams Limit</div>
+              <div class="setting-desc">Choose pool size of highest-ranked teams</div>
+            </div>
+            <select class="setting-select" id="top-count-select">
+              <option value="50">top 50 (World Champions &amp; Einstein Finalists)</option>
+              <option value="100" selected>top 100 (World Championship Alliances)</option>
+              <option value="250">top 250 (Championship Playoff Contenders)</option>
+              <option value="500">top 500 (World Championship Division Teams)</option>
+              <option value="1000">top 1000 (Championship &amp; DCMP Teams)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- State / Province picker (shown only when mode=state) -->
+        <div class="region-picker" id="state-picker">
+          <div class="setting-row" style="flex-direction:column;align-items:stretch;gap:10px">
+            <div class="setting-info">
+              <div class="setting-name">Select State, Province, or Country</div>
+              <div class="setting-desc">Includes both Regional and District teams from that state</div>
+            </div>
+            <div class="region-search-wrap">
+              <input type="text" id="state-search"
+                placeholder="Search state (e.g. California, New York, Texas, Florida, Ontario)..." autocomplete="off" />
+            </div>
+            <div class="region-results" id="state-results"></div>
+          </div>
+        </div>
+
+        <!-- Regional / Event picker (shown only when mode=event) -->
+        <div class="region-picker" id="event-picker">
+          <div class="setting-row" id="event-statbotics-disclaimer" style="display:none;background:rgba(239,68,68,0.1);padding:10px 14px;border-radius:6px;margin-bottom:12px;">
+            <div class="setting-info" style="max-width:100%">
+              <div class="setting-name" style="color:var(--warn);margin-bottom:4px">TBA Key Required</div>
+              <div class="setting-desc">Live event rosters require a The Blue Alliance API key. You are currently in Statbotics Only Mode, so this mode will fallback to using Top Teams.</div>
+            </div>
+          </div>
+          <div class="setting-row" style="flex-direction:column;align-items:stretch;gap:10px">
+            <div class="setting-info">
+              <div class="setting-name">Select Regional or District Event</div>
+              <div class="setting-desc">Search all official FRC regionals and district events</div>
+            </div>
+            <div class="region-search-wrap">
+              <input type="text" id="event-search"
+                placeholder="Search regional (e.g. Silicon Valley, New York City, Rocket City)..." autocomplete="off" />
+            </div>
+            <div class="region-results" id="event-results"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Season -->
+      <div class="settings-section">
+        <div class="settings-label">Season</div>
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-name">Year</div>
+            <div class="setting-desc">Which FRC season to pull data from</div>
+          </div>
+          <select class="setting-select" id="year-select">
+            <option value="2026" selected>2026</option>
+            <option value="2025">2025</option>
+            <option value="2024">2024</option>
+            <option value="2023">2023</option>
+            <option value="2022">2022</option>
+            <option value="2021">2021</option>
+            <option value="2020">2020</option>
+            <option value="2019">2019</option>
           </select>
         </div>
       </div>
 
-      <!-- State / Province picker (shown only when mode=state) -->
-      <div class="region-picker" id="state-picker">
-        <div class="setting-row" style="flex-direction:column;align-items:stretch;gap:10px">
+      <!-- Quiz settings -->
+      <div class="settings-section">
+        <div class="settings-label">Quiz Options</div>
+
+        <div class="setting-row" id="photo-only-row">
           <div class="setting-info">
-            <div class="setting-name">Select State, Province, or Country</div>
-            <div class="setting-desc">Includes both Regional and District teams from that state</div>
+            <div class="setting-name">Only teams with photos</div>
+            <div class="setting-desc">Filter questions to teams with verified robot photos (requires TBA)</div>
           </div>
-          <div class="region-search-wrap">
-            <input type="text" id="state-search" placeholder="Search state (e.g. California, New York, Texas, Florida, Ontario)..." autocomplete="off" />
-          </div>
-          <div class="region-results" id="state-results"></div>
+          <label class="toggle">
+            <input type="checkbox" id="photo-only-toggle" />
+            <span class="toggle-slider"></span>
+          </label>
         </div>
-      </div>
 
-      <!-- Regional / Event picker (shown only when mode=event) -->
-      <div class="region-picker" id="event-picker">
-        <div class="setting-row" style="flex-direction:column;align-items:stretch;gap:10px">
+        <div class="setting-row">
           <div class="setting-info">
-            <div class="setting-name">Select Regional or District Event</div>
-            <div class="setting-desc">Search all official FRC regionals and district events</div>
+            <div class="setting-name">Session Format</div>
+            <div class="setting-desc">Endless mode — stop anytime and see your full scorecard</div>
           </div>
-          <div class="region-search-wrap">
-            <input type="text" id="event-search" placeholder="Search regional (e.g. Silicon Valley, New York City, Rocket City)..." autocomplete="off" />
+          <span style="font-size:0.85rem;font-weight:600;color:var(--accent)">Infinite</span>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-name">Answer choices</div>
+            <div class="setting-desc">Number of options shown per question</div>
           </div>
-          <div class="region-results" id="event-results"></div>
+          <select class="setting-select" id="choices-select">
+            <option value="2">2 choices</option>
+            <option value="3">3 choices</option>
+            <option value="4" selected>4 choices</option>
+            <option value="6">6 choices</option>
+          </select>
         </div>
+      </div>
+
+      <div style="padding-bottom:64px">
+        <button class="btn btn-primary btn-lg" id="settings-start-btn">Start Quiz</button>
       </div>
     </div>
 
-    <!-- Season -->
-    <div class="settings-section">
-      <div class="settings-label">Season</div>
-      <div class="setting-row">
-        <div class="setting-info">
-          <div class="setting-name">Year</div>
-          <div class="setting-desc">Which FRC season to pull data from</div>
-        </div>
-        <select class="setting-select" id="year-select">
-          <option value="2026" selected>2026</option>
-          <option value="2025">2025</option>
-          <option value="2024">2024</option>
-          <option value="2023">2023</option>
-          <option value="2022">2022</option>
-          <option value="2021">2021</option>
-          <option value="2020">2020</option>
-          <option value="2019">2019</option>
-        </select>
+  </main>
+
+  <!-- Modal: TBA API Key First-Time Prompt -->
+  <div class="modal-overlay" id="api-key-modal" style="display:none">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>The Blue Alliance API Key</h3>
+        <button class="modal-close" id="modal-close-btn" aria-label="Close">&times;</button>
       </div>
-    </div>
-
-    <!-- Quiz settings -->
-    <div class="settings-section">
-      <div class="settings-label">Quiz Options</div>
-
-      <div class="setting-row">
-        <div class="setting-info">
-          <div class="setting-name">Only teams with photos</div>
-          <div class="setting-desc">Filter questions to teams with verified robot photos</div>
+      <div class="modal-body">
+        <p style="margin-bottom:12px;color:var(--text);font-size:0.92rem;line-height:1.5">
+          To load robot photos and full FRC team rosters, please enter your The Blue Alliance Read API key:
+        </p>
+        <input type="text" class="setting-input" id="modal-tba-input" placeholder="Paste TBA API key here..."
+          style="width:100%;margin-bottom:12px;padding:10px 14px" />
+        <div class="modal-subtext">
+          Get a free API key at <a href="https://www.thebluealliance.com/account" target="_blank"
+            rel="noopener noreferrer"
+            style="color:var(--accent);text-decoration:underline">thebluealliance.com/account</a>.
+          <div class="modal-fallback-note">
+            <strong>Worst comes to worst:</strong> frcq can run with just Statbotics (no API key required, text-only
+            robot numbers without TBA photos).
+          </div>
         </div>
-        <label class="toggle">
-          <input type="checkbox" id="photo-only-toggle" />
-          <span class="toggle-slider"></span>
-        </label>
       </div>
-
-      <div class="setting-row">
-        <div class="setting-info">
-          <div class="setting-name">Session Format</div>
-          <div class="setting-desc">Endless mode — stop anytime and see your full scorecard</div>
-        </div>
-        <span style="font-size:0.85rem;font-weight:600;color:var(--accent)">Infinite</span>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="modal-statbotics-btn">Use Statbotics Only</button>
+        <button class="btn btn-primary" id="modal-save-btn">Save &amp; Start Quiz</button>
       </div>
-
-      <div class="setting-row">
-        <div class="setting-info">
-          <div class="setting-name">Answer choices</div>
-          <div class="setting-desc">Number of options shown per question</div>
-        </div>
-        <select class="setting-select" id="choices-select">
-          <option value="2">2 choices</option>
-          <option value="3">3 choices</option>
-          <option value="4" selected>4 choices</option>
-          <option value="6">6 choices</option>
-        </select>
-      </div>
-    </div>
-
-    <div style="padding-bottom:64px">
-      <button class="btn btn-primary btn-lg" id="settings-start-btn">Start Quiz</button>
     </div>
   </div>
 
-</main>
+  <!-- Toast container -->
+  <div class="toast-container" id="toast-container"></div>
 
-<!-- Toast container -->
-<div class="toast-container" id="toast-container"></div>
-
-<script src="config.js"></script>
-<script src="popular_teams.js"></script>
-<script src="app.js"></script>
-<script>
-  // Show/hide API key notice based on config
-  document.addEventListener('DOMContentLoaded', () => {
-    const notice = document.getElementById('api-notice');
-    if (CONFIG.TBA_API_KEY && CONFIG.TBA_API_KEY !== 'YOUR_TBA_API_KEY_HERE') {
-      notice.style.display = 'none';
-    }
-  });
-</script>
+  <script src="config.js"></script>
+  <script src="popular_teams.js"></script>
+  <script src="app.js"></script>
 </body>
+
 </html>

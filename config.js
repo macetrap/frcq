@@ -5,7 +5,7 @@
 
 const CONFIG = {
   // Get your TBA API key at: https://www.thebluealliance.com/account
-  TBA_API_KEY: "3hHXt9u6AmK3sBo2ftxlunhf7zQQOKcuMVc2CgI9U5MFDMP0JV1LLlmGdSDt1H1m",
+  TBA_API_KEY: "",
 
   // Statbotics API key (optional - the public API doesn't require a key)
   // If you have one, add it here.

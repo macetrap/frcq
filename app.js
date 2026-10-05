@@ -1,6 +1,6 @@
 // ============================================================
-//  FRC Quiz - App Logic
-//  Depends on: config.js
+//  FRCQ - App Logic
+//  Depends on: config.js, popular_teams.js
 // ============================================================
 
 /* ── States, Provinces & Countries List ────────────────────── */
@@ -78,9 +78,10 @@ const state = {
     topCount: 100,           // 50 | 100 | 250 | 500 | 1000
     stateRegion: { code: 'CA', name: 'California' },
     event: null,             // { key, name }
-    year: CONFIG.DEFAULT_YEAR || 2026,
-    answerChoices: CONFIG.ANSWER_CHOICES || 4,
-    requirePhotos: false,     // only teams with photos toggle
+    year: (typeof CONFIG !== 'undefined' && CONFIG.DEFAULT_YEAR) || 2026,
+    answerChoices: (typeof CONFIG !== 'undefined' && CONFIG.ANSWER_CHOICES) || 4,
+    requirePhotos: false,    // only teams with photos toggle
+    statboticsOnly: false,   // Statbotics-only mode flag
   },
   teamPool: [],              // available teams for current quiz mode
   verifiedPhotoPool: [],     // teams confirmed to have working photos preloaded
@@ -91,7 +92,8 @@ const state = {
   history: [],               // [{ team, chosen, correct }]
   allEvents: [],             // cache of all official events for the year
   cachedPages: {},           // cache for TBA team pages
-  cachedCmpTeams: null,      // cache of world championship teams
+  cachedTopTeams: null,      // cache of top teams
+  cachedTopTeamsYear: null,
   imageCache: {},            // `${year}_${teamKey}` -> imageUrl | null
   quizSession: 0,            // bumped on every quiz start - stale async work checks this
   scannerSession: null,      // quizSession the background photo scanner belongs to
@@ -99,18 +101,116 @@ const state = {
 
 let isAdvancing = false;
 
-/* ── API Key Helper ────────────────────────────────────────── */
+/* ── DOM helper ───────────────────────────────────────────── */
+function $(id) { return document.getElementById(id); }
+
+/* ── Theme Customization ───────────────────────────────────── */
+const THEME_STORAGE_KEY = 'frcq-theme-custom';
+
+function hexToRgb(hex) {
+  let c = hex.replace('#', '');
+  if (c.length === 3) c = c.split('').map(x => x + x).join('');
+  const num = parseInt(c, 16);
+  return {
+    r: (num >> 16) & 255,
+    g: (num >> 8) & 255,
+    b: num & 255
+  };
+}
+
+function adjustBrightness(hex, percent) {
+  try {
+    let { r, g, b } = hexToRgb(hex);
+    r = Math.max(0, Math.min(255, Math.round(r * (1 + percent / 100))));
+    g = Math.max(0, Math.min(255, Math.round(g * (1 + percent / 100))));
+    b = Math.max(0, Math.min(255, Math.round(b * (1 + percent / 100))));
+    return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+  } catch {
+    return hex;
+  }
+}
+
+function getStoredTheme() {
+  const saved = localStorage.getItem(THEME_STORAGE_KEY);
+  if (saved) {
+    try {
+      return JSON.parse(saved);
+    } catch {}
+  }
+  return {
+    mode: 'dark',
+    noOutlines: false,
+    accentColor: '#2563eb',
+  };
+}
+
+function applyTheme(theme, save = true) {
+  const root = document.documentElement;
+  const mode = theme.mode || 'dark';
+  root.setAttribute('data-theme', mode);
+
+  if (theme.noOutlines) {
+    document.body.classList.add('no-outlines');
+  } else {
+    document.body.classList.remove('no-outlines');
+  }
+
+  const accent = theme.accentColor || '#2563eb';
+  const { r, g, b } = hexToRgb(accent);
+  const glow = `rgba(${r}, ${g}, ${b}, 0.25)`;
+  const dark = adjustBrightness(accent, -18);
+
+  root.style.setProperty('--accent', accent);
+  root.style.setProperty('--accent-glow', glow);
+  root.style.setProperty('--accent-dark', dark);
+
+  if (save) {
+    localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify(theme));
+  }
+
+  // Update theme UI controls if present
+  const darkRadio = $('theme-dark');
+  const lightRadio = $('theme-light');
+  if (darkRadio && lightRadio) {
+    if (mode === 'light') lightRadio.checked = true;
+    else darkRadio.checked = true;
+  }
+
+  const outlineToggle = $('no-outlines-toggle');
+  if (outlineToggle) {
+    outlineToggle.checked = !!theme.noOutlines;
+  }
+
+  const customPicker = $('custom-color-picker');
+  if (customPicker) {
+    customPicker.value = accent;
+  }
+
+  document.querySelectorAll('.color-swatch').forEach(swatch => {
+    const col = swatch.getAttribute('data-color') || '';
+    swatch.classList.toggle('active', col.toLowerCase() === accent.toLowerCase());
+  });
+}
+
+// Immediate initial theme execution to prevent dark/light flash
+applyTheme(getStoredTheme(), false);
+
+/* ── API Key & Statbotics Helpers ─────────────────────────── */
 function getTbaKey() {
   const saved = localStorage.getItem('frcq-tba-key');
   if (saved && saved.trim()) return saved.trim();
-  if (CONFIG.TBA_API_KEY && CONFIG.TBA_API_KEY !== 'YOUR_TBA_API_KEY_HERE') {
+  if (typeof CONFIG !== 'undefined' && CONFIG.TBA_API_KEY && CONFIG.TBA_API_KEY !== 'YOUR_TBA_API_KEY_HERE') {
     return CONFIG.TBA_API_KEY.trim();
   }
   return '';
 }
 
-/* ── TBA API helpers ───────────────────────────────────────── */
+function isStatboticsOnly() {
+  return localStorage.getItem('frcq-statbotics-only') === 'true' || state.settings.statboticsOnly === true;
+}
+
 const TBA_BASE = 'https://www.thebluealliance.com/api/v3';
+const STATBOTICS_BASE = 'https://api.statbotics.io/v3';
 
 async function tbaFetch(path) {
   const key = getTbaKey();
@@ -123,6 +223,50 @@ async function tbaFetch(path) {
   });
   if (!res.ok) throw new Error(`TBA ${res.status}: ${path}`);
   return res.json();
+}
+
+async function statboticsFetch(path) {
+  const res = await fetch(`${STATBOTICS_BASE}${path}`);
+  if (!res.ok) throw new Error(`Statbotics ${res.status}: ${path}`);
+  return res.json();
+}
+
+function normaliseStatboticsTeam(item) {
+  const num = item.team != null ? item.team : item.team_number;
+  return {
+    number: num,
+    key: `frc${num}`,
+    name: item.name || `Team ${num}`,
+    city: item.city || '',
+    state: item.state || '',
+    country: item.country || '',
+  };
+}
+
+function normaliseTeam(t) {
+  return {
+    number: t.team_number,
+    key: t.key,
+    name: t.nickname || t.name || `Team ${t.team_number}`,
+    city: t.city || '',
+    state: t.state_prov || '',
+    country: t.country || '',
+  };
+}
+
+/* ── Modal Helpers ────────────────────────────────────────── */
+function showApiKeyModal() {
+  const modal = $('api-key-modal');
+  if (!modal) return;
+  const input = $('modal-tba-input');
+  if (input) input.value = getTbaKey();
+  modal.style.display = 'flex';
+  if (input) input.focus();
+}
+
+function hideApiKeyModal() {
+  const modal = $('api-key-modal');
+  if (modal) modal.style.display = 'none';
 }
 
 /* ── Event & State Helpers ─────────────────────────────────── */
@@ -141,52 +285,118 @@ async function loadEvents(year) {
   return state.allEvents;
 }
 
+/* ── Statbotics Fetchers ───────────────────────────────────── */
+async function fetchTopStatboticsTeams(year, count) {
+  let list = [];
+  try {
+    list = await statboticsFetch(`/team_years?year=${year}&metric=norm_epa&limit=${Math.min(count, 100)}`);
+  } catch {
+    list = [];
+  }
+  if (!list || list.length === 0) {
+    try {
+      list = await statboticsFetch(`/teams?limit=${Math.min(count, 100)}`);
+    } catch {
+      list = [];
+    }
+  }
+  return list.map(normaliseStatboticsTeam);
+}
+
+async function fetchStateStatboticsTeams(region) {
+  const code = (region.code || '').toUpperCase().trim();
+  let list = [];
+  try {
+    list = await statboticsFetch(`/teams?state=${encodeURIComponent(code)}&limit=100`);
+  } catch {
+    list = [];
+  }
+  if (!list || list.length === 0) {
+    if (typeof POPULAR_TEAMS !== 'undefined' && Array.isArray(POPULAR_TEAMS)) {
+      list = POPULAR_TEAMS.filter(t => (t.state || '').toUpperCase() === code);
+    }
+  }
+  return (list || []).map(normaliseStatboticsTeam);
+}
+
+async function fetchRandomStatboticsTeams() {
+  const offset = Math.floor(Math.random() * 25) * 50;
+  const list = await statboticsFetch(`/teams?limit=100&offset=${offset}`);
+  return (list || []).map(normaliseStatboticsTeam);
+}
+
 /* ── Build Team Pool ───────────────────────────────────────── */
 async function buildTeamPool(session = state.quizSession) {
   const { mode, topCount, stateRegion, event, year } = state.settings;
+  const statOnly = isStatboticsOnly();
   let pool = [];
 
-  if (mode === 'popular') {
-    // 123 Popular Teams from frc_team_numbers.txt
-    if (typeof POPULAR_TEAMS !== 'undefined' && Array.isArray(POPULAR_TEAMS) && POPULAR_TEAMS.length > 0) {
-      pool = [...POPULAR_TEAMS];
+  const loadingText = $('quiz-loading-text');
+
+  if (statOnly) {
+    if (loadingText) loadingText.textContent = 'Fetching teams from Statbotics…';
+
+    if (mode === 'popular') {
+      if (typeof POPULAR_TEAMS !== 'undefined' && Array.isArray(POPULAR_TEAMS) && POPULAR_TEAMS.length > 0) {
+        pool = [...POPULAR_TEAMS];
+      } else {
+        pool = await fetchTopStatboticsTeams(year, 100);
+      }
+    } else if (mode === 'top') {
+      pool = await fetchTopStatboticsTeams(year, parseInt(topCount) || 100);
+    } else if (mode === 'state') {
+      pool = await fetchStateStatboticsTeams(stateRegion || { code: 'CA', name: 'California' });
+      if (pool.length < state.settings.answerChoices) {
+        pool = await fetchTopStatboticsTeams(year, 100);
+      }
+    } else if (mode === 'event') {
+      toast('Live event rosters require a TBA key. Using top teams in Statbotics mode.');
+      pool = await fetchTopStatboticsTeams(year, 100);
     } else {
-      pool = await fetchTopRankedTeams(year, 100);
-    }
-
-  } else if (mode === 'top') {
-    pool = await fetchTopRankedTeams(year, parseInt(topCount) || 100);
-
-  } else if (mode === 'state') {
-    const region = stateRegion || { code: 'CA', name: 'California' };
-    pool = await fetchStateTeams(year, region);
-
-  } else if (mode === 'event') {
-    let targetEvent = event;
-    if (!targetEvent) {
-      const events = await loadEvents(year);
-      targetEvent = events[0] || null;
-      if (targetEvent && session === state.quizSession) {
-        state.settings.event = { key: targetEvent.key, name: targetEvent.name };
-        saveSettings();
+      pool = await fetchRandomStatboticsTeams();
+      if (!pool || pool.length < state.settings.answerChoices) {
+        pool = await fetchTopStatboticsTeams(year, 100);
       }
     }
-    if (!targetEvent) throw new Error(`No events found for ${year}.`);
-    const teams = await tbaFetch(`/event/${targetEvent.key}/teams/simple`);
-    pool = (teams || []).map(normaliseTeam);
-
   } else {
-    // Random / All Teams: Pick random pages of active teams
-    const randomPage = Math.floor(Math.random() * 6);
-    let batch = await fetchTbaPage(year, randomPage);
-    if (!batch || batch.length < state.settings.answerChoices) {
-      batch = await fetchTbaPage(year, 0);
+    // Normal TBA mode
+    if (loadingText) loadingText.textContent = 'Fetching teams from The Blue Alliance…';
+
+    if (mode === 'popular') {
+      if (typeof POPULAR_TEAMS !== 'undefined' && Array.isArray(POPULAR_TEAMS) && POPULAR_TEAMS.length > 0) {
+        pool = [...POPULAR_TEAMS];
+      } else {
+        pool = await fetchTopRankedTeams(year, 100);
+      }
+    } else if (mode === 'top') {
+      pool = await fetchTopRankedTeams(year, parseInt(topCount) || 100);
+    } else if (mode === 'state') {
+      const region = stateRegion || { code: 'CA', name: 'California' };
+      pool = await fetchStateTeams(year, region);
+    } else if (mode === 'event') {
+      let targetEvent = event;
+      if (!targetEvent) {
+        const events = await loadEvents(year);
+        targetEvent = events[0] || null;
+        if (targetEvent && session === state.quizSession) {
+          state.settings.event = { key: targetEvent.key, name: targetEvent.name };
+          saveSettings();
+        }
+      }
+      if (!targetEvent) throw new Error(`No events found for ${year}.`);
+      const teams = await tbaFetch(`/event/${targetEvent.key}/teams/simple`);
+      pool = (teams || []).map(normaliseTeam);
+    } else {
+      // Random / All Teams
+      const randomPage = Math.floor(Math.random() * 6);
+      let batch = await fetchTbaPage(year, randomPage);
+      if (!batch || batch.length < state.settings.answerChoices) {
+        batch = await fetchTbaPage(year, 0);
+      }
+      pool = (batch || []).map(normaliseTeam);
     }
-    pool = (batch || []).map(normaliseTeam);
   }
 
-  // A newer quiz was started while this one was still fetching.
-  // Discard the result so it can never overwrite the newer session's pool.
   if (session !== state.quizSession) return false;
 
   // Deduplicate and filter out teams without a name
@@ -199,12 +409,10 @@ async function buildTeamPool(session = state.quizSession) {
   });
 
   if (pool.length < state.settings.answerChoices) {
-    throw new Error(`Not enough active teams found for ${year} with the selected options.`);
+    throw new Error(`Not enough active teams found for ${year}. Try Popular Teams or All Teams.`);
   }
 
   state.teamPool = pool;
-
-  // Reset infinite queue
   state.usedTeamKeys.clear();
   state.currentQuestionNumber = 1;
   state.score = 0;
@@ -212,7 +420,7 @@ async function buildTeamPool(session = state.quizSession) {
   return true;
 }
 
-/* ── Top Ranked Teams Fetcher ─────────────────────────────── */
+/* ── Top Ranked Teams Fetcher (TBA) ────────────────────────── */
 async function fetchTopRankedTeams(year, count) {
   if (!state.cachedTopTeams || state.cachedTopTeamsYear !== year) {
     const teamMap = new Map();
@@ -243,8 +451,6 @@ async function fetchTopRankedTeams(year, count) {
         })
       );
     } else {
-      // Current / Upcoming season (e.g. 2026): championship hasn't completed yet.
-      // Load active 2026 teams from TBA team directory pages.
       const neededPages = Math.max(2, Math.ceil(count / 100));
       for (let p = 0; p < neededPages; p++) {
         try {
@@ -258,7 +464,6 @@ async function fetchTopRankedTeams(year, count) {
       }
     }
 
-    // If more teams are requested than currently in teamMap, fetch more pages for this year
     let pageIdx = 0;
     while (teamMap.size < count && pageIdx < 6) {
       try {
@@ -280,7 +485,7 @@ async function fetchTopRankedTeams(year, count) {
   return [...state.cachedTopTeams].slice(0, count);
 }
 
-/* ── State / Province Teams Fetcher (Regional + District) ──── */
+/* ── State Teams Fetcher (TBA) ─────────────────────────────── */
 async function fetchStateTeams(year, region) {
   const events = await loadEvents(year);
   const code = (region.code || '').toUpperCase().trim();
@@ -342,27 +547,13 @@ async function fetchTbaPage(year, page) {
   return batch || [];
 }
 
-function normaliseTeam(t) {
-  return {
-    number: t.team_number,
-    key: t.key,
-    name: t.nickname || t.name || `Team ${t.team_number}`,
-    city: t.city || '',
-    state: t.state_prov || '',
-    country: t.country || '',
-  };
-}
-
-/* ── Direct Image Extractor & Speed Optimizer ────────────── */
+/* ── Robot Photo Fetcher & Cache ───────────────────────────── */
 function optimizeImageUrl(rawUrl, foreignKey) {
   let url = rawUrl ? String(rawUrl).trim() : '';
-
-  // Ensure https
   if (url.startsWith('http://')) {
     url = 'https://' + url.slice(7);
   }
 
-  // Handle Imgur
   let imgurId = foreignKey ? String(foreignKey).trim() : null;
   if (!imgurId && url.includes('imgur.com')) {
     const m = url.match(/imgur\.com\/(?:gallery\/|a\/)?([a-zA-Z0-9]+)/i);
@@ -371,7 +562,6 @@ function optimizeImageUrl(rawUrl, foreignKey) {
 
   if (imgurId) {
     const cleanId = imgurId.replace(/\.(jpeg|jpg|png|webp|gif)$/i, '').replace(/[hlmts]$/, '');
-    // If it's a gif, keep gif, otherwise use huge thumbnail h.jpg for 10x-20x faster downloads (~100KB)
     if (url.endsWith('.gif')) {
       return `https://i.imgur.com/${cleanId}.gif`;
     }
@@ -420,7 +610,6 @@ function extractDirectImageUrl(mediaList) {
   return pref ? pref.url : candidates[0].url;
 }
 
-/* ── Preload & Verify Image Directly in Browser Cache ──────── */
 function verifyAndPreloadUrl(url, timeoutMs = 3500) {
   return new Promise((resolve) => {
     if (!url) return resolve(false);
@@ -431,7 +620,6 @@ function verifyAndPreloadUrl(url, timeoutMs = 3500) {
     img.onload = () => {
       if (!done) {
         done = true;
-        // Filter out 1x1 tracking pixels or Imgur's 161x81 "removed image" placeholder
         if (img.naturalWidth > 180 && img.naturalHeight > 100) {
           resolve(true);
         } else {
@@ -456,8 +644,11 @@ function verifyAndPreloadUrl(url, timeoutMs = 3500) {
   });
 }
 
-/* ── Fast Robot Image Fetcher (Strictly for the selected season) ── */
 async function fetchRobotImage(teamKey, year) {
+  if (isStatboticsOnly()) {
+    return null;
+  }
+
   const selectedYear = year || state.settings.year;
   const cacheKey = `${selectedYear}_${teamKey}`;
   if (cacheKey in state.imageCache) {
@@ -465,12 +656,10 @@ async function fetchRobotImage(teamKey, year) {
   }
 
   try {
-    // Strictly fetch media for the chosen season so robots from previous seasons are never shown
     const media = await tbaFetch(`/team/${teamKey}/media/${selectedYear}`).catch(() => []);
     if (Array.isArray(media) && media.length > 0) {
       const candidateUrl = extractDirectImageUrl(media);
       if (candidateUrl) {
-        // Preload and verify that browser can actually load the image
         const isValid = await verifyAndPreloadUrl(candidateUrl);
         if (isValid) {
           state.imageCache[cacheKey] = candidateUrl;
@@ -484,10 +673,8 @@ async function fetchRobotImage(teamKey, year) {
   return null;
 }
 
-/* ── Background Photo Scanner (Keeps upcoming questions instant) ── */
 async function startBackgroundPhotoScanner(maxNeeded = 80, session = state.quizSession) {
-  // Only one scanner per quiz session. Starting a new session takes over the
-  // slot; the older scanner sees the mismatch on its next tick and exits.
+  if (isStatboticsOnly()) return;
   if (state.scannerSession === session) return;
   state.scannerSession = session;
 
@@ -496,7 +683,6 @@ async function startBackgroundPhotoScanner(maxNeeded = 80, session = state.quizS
     const year = state.settings.year;
 
     for (let i = 0; i < pool.length; i += 6) {
-      // Stop immediately if a newer quiz (possibly with a different team pool) started
       if (state.quizSession !== session) break;
       if (state.verifiedPhotoPool.length >= maxNeeded) break;
 
@@ -513,7 +699,6 @@ async function startBackgroundPhotoScanner(maxNeeded = 80, session = state.quizS
         })
       );
 
-      // Brief yield so the UI event loop stays responsive
       await new Promise(r => setTimeout(r, 40));
     }
   } catch (err) {
@@ -528,12 +713,11 @@ async function getNextQuestion(session = state.quizSession) {
   const pool = state.teamPool;
   if (!pool || pool.length === 0) throw new Error('Team pool is empty.');
   const year = state.settings.year;
+  const statOnly = isStatboticsOnly();
 
-  if (state.settings.requirePhotos) {
-    // 1. Gather all verified teams not yet asked this cycle
+  if (state.settings.requirePhotos && !statOnly) {
     let available = state.verifiedPhotoPool.filter(t => !state.usedTeamKeys.has(t.key));
 
-    // 2. If no available verified teams, scan any remaining unchecked teams in the pool first!
     if (available.length === 0) {
       const unchecked = pool.filter(t => !(`${year}_${t.key}` in state.imageCache));
       if (unchecked.length > 0) {
@@ -554,8 +738,6 @@ async function getNextQuestion(session = state.quizSession) {
       }
     }
 
-    // 3. ONLY when all teams in the pool have been scanned AND all verified teams have been asked,
-    // reset used keys for an endless loop across all verified teams
     if (available.length === 0 && state.verifiedPhotoPool.length > 0) {
       state.usedTeamKeys.clear();
       available = [...state.verifiedPhotoPool];
@@ -565,12 +747,10 @@ async function getNextQuestion(session = state.quizSession) {
       throw new Error(`No verified robot photos found for ${year} with these teams. Please try Top Teams or disable "Only teams with photos".`);
     }
 
-    // Pick from verifiedPhotoPool
     const chosen = available[Math.floor(Math.random() * available.length)];
     state.usedTeamKeys.add(chosen.key);
     const chosenImg = state.imageCache[`${year}_${chosen.key}`];
 
-    // Pick 3 distractors from the broader pool (names only)
     const distractors = pool
       .filter(t => t.key !== chosen.key && t.name !== chosen.name)
       .sort(() => Math.random() - 0.5)
@@ -580,7 +760,7 @@ async function getNextQuestion(session = state.quizSession) {
     return { correct: chosen, choices, preloadedImage: chosenImg };
 
   } else {
-    // Normal mode: pick any team
+    // Normal / Statbotics mode
     let available = pool.filter(t => !state.usedTeamKeys.has(t.key));
     if (available.length === 0) {
       state.usedTeamKeys.clear();
@@ -589,9 +769,12 @@ async function getNextQuestion(session = state.quizSession) {
     const correct = available[Math.floor(Math.random() * available.length)] || pool[0];
     state.usedTeamKeys.add(correct.key);
 
-    let imgUrl = state.imageCache[`${year}_${correct.key}`] || null;
-    if (!(`${year}_${correct.key}` in state.imageCache)) {
-      imgUrl = await fetchRobotImage(correct.key, year);
+    let imgUrl = null;
+    if (!statOnly) {
+      imgUrl = state.imageCache[`${year}_${correct.key}`] || null;
+      if (!(`${year}_${correct.key}` in state.imageCache)) {
+        imgUrl = await fetchRobotImage(correct.key, year);
+      }
     }
 
     const distractors = pool
@@ -604,10 +787,7 @@ async function getNextQuestion(session = state.quizSession) {
   }
 }
 
-
-/* ── DOM helpers ─────────────────────────────────────────── */
-function $(id) { return document.getElementById(id); }
-
+/* ── Navigation & Toasts ──────────────────────────────────── */
 function showPage(name) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   $(`page-${name}`).classList.add('active');
@@ -615,10 +795,12 @@ function showPage(name) {
 }
 
 function toast(msg) {
+  const container = $('toast-container');
+  if (!container) return;
   const t = document.createElement('div');
   t.className = 'toast';
   t.textContent = msg;
-  $('toast-container').appendChild(t);
+  container.appendChild(t);
   setTimeout(() => t.remove(), 3200);
 }
 
@@ -635,7 +817,6 @@ async function renderQuestion(session = state.quizSession) {
   }
 
   const { correct, choices, preloadedImage } = await getNextQuestion(session);
-  // A newer quiz started while we were waiting - never paint a question from an old team pool
   if (session !== state.quizSession) return;
   state.currentQuestion = { correct, choices };
 
@@ -646,30 +827,39 @@ async function renderQuestion(session = state.quizSession) {
   $('quiz-progress').textContent = `Question #${state.currentQuestionNumber}`;
   $('quiz-score').innerHTML = `Score <span>${state.score}</span>/${totalAnswered} (${pct}%)`;
 
-  // Robot number only - NO location text
+  // Robot number
   $('robot-number').textContent = `#${correct.number}`;
   $('robot-question').textContent = `Which team is Robot #${correct.number}?`;
 
-  // Image loading placeholder
   const imgWrap = $('robot-image-wrap');
   imgWrap.innerHTML = `
     <div class="robot-image-placeholder">
       <div class="icon">
         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
       </div>
-      <div>Loading robot photo…</div>
+      <div>${isStatboticsOnly() ? 'Statbotics Mode (No photo)' : 'Loading robot photo…'}</div>
     </div>
   `;
 
-  // Render choices - TEAM NAMES ONLY (no location)
   renderChoices(choices, correct);
 
-  // Clear feedback
   const fb = $('feedback-banner');
   fb.className = 'feedback-banner';
   fb.textContent = '';
 
-  // Apply image
+  const statOnly = isStatboticsOnly();
+  if (statOnly) {
+    imgWrap.innerHTML = `
+      <div class="robot-image-placeholder">
+        <div class="icon">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+        </div>
+        <div>Statbotics Mode • Team #${correct.number}</div>
+      </div>
+    `;
+    return;
+  }
+
   const yearKey = `${state.settings.year}_${correct.key}`;
   const imageUrl = preloadedImage || state.imageCache[yearKey];
 
@@ -679,7 +869,6 @@ async function renderQuestion(session = state.quizSession) {
     img.alt = `Team ${correct.number} Robot`;
     img.loading = 'eager';
 
-    // If already preloaded & cached by browser, render instantly without flash
     if (img.complete && img.naturalWidth > 0) {
       imgWrap.innerHTML = '';
       imgWrap.appendChild(img);
@@ -692,7 +881,6 @@ async function renderQuestion(session = state.quizSession) {
       img.onerror = () => {
         if (session !== state.quizSession) return;
         if (state.settings.requirePhotos) {
-          console.warn(`Image for team ${correct.number} failed to display, loading next question...`);
           state.imageCache[yearKey] = null;
           state.verifiedPhotoPool = state.verifiedPhotoPool.filter(t => t.key !== correct.key);
           renderQuestion(session);
@@ -710,7 +898,6 @@ async function renderQuestion(session = state.quizSession) {
     }
   } else {
     if (state.settings.requirePhotos) {
-      // Safety guard: never show "No photo available" when requirePhotos is active
       renderQuestion(session);
       return;
     }
@@ -725,7 +912,7 @@ async function renderQuestion(session = state.quizSession) {
   }
 }
 
-/* ── Clean Team Name for Display (Strips team numbers from answer choices) ── */
+/* ── Clean Team Name for Display ─────────────────────────── */
 function getCleanTeamName(team, correctNumber) {
   let name = (team.name || (`Team ${team.number}`)).trim();
   const numStr = String(team.number);
@@ -745,7 +932,6 @@ function getCleanTeamName(team, correctNumber) {
     name = name.replace(new RegExp('\\b' + n + '\\b', 'g'), ' ');
   }
 
-  // Remove empty parens/brackets and clean up leading/trailing punctuation (dashes, colons, commas)
   let cleaned = name
     .replace(/\(\s*\)/g, ' ')
     .replace(/\[\s*\]/g, ' ')
@@ -754,7 +940,6 @@ function getCleanTeamName(team, correctNumber) {
     .replace(/\s{2,}/g, ' ')
     .trim();
 
-  // If removing the number leaves nothing or generic "Team", keep original name
   if (!cleaned || cleaned.toLowerCase() === 'team' || cleaned.toLowerCase() === 'frc') {
     return team.name || (`Team ${team.number}`);
   }
@@ -787,7 +972,6 @@ function handleAnswer(chosen, correct, allChoices) {
   const totalAnswered = state.history.length;
   const pct = Math.round((state.score / totalAnswered) * 100);
 
-  // Style buttons
   $('choices-grid').querySelectorAll('.choice-btn').forEach((btn, i) => {
     btn.disabled = true;
     const team = allChoices[i];
@@ -798,7 +982,6 @@ function handleAnswer(chosen, correct, allChoices) {
     }
   });
 
-  // Feedback banner (clean without emojis)
   const fb = $('feedback-banner');
   if (isCorrect) {
     fb.className = 'feedback-banner show correct-fb';
@@ -808,7 +991,6 @@ function handleAnswer(chosen, correct, allChoices) {
     fb.textContent = `Incorrect. Robot #${correct.number} is ${correct.name}.`;
   }
 
-  // Show Next button immediately and ensure it is enabled
   const nextBtn = $('next-btn');
   if (nextBtn) {
     nextBtn.style.display = 'inline-flex';
@@ -862,7 +1044,7 @@ function showResults() {
 
   $('results-score-text').textContent = `${score}/${total}`;
   $('results-title').textContent = `${pct}% — ${getRank(pct)}`;
-  $('results-sub').textContent = `You answered ${score} out of ${total} correctly in this endless session.`;
+  $('results-sub').textContent = `You answered ${score} out of ${total} correctly in this session.`;
 
   $('breakdown-correct').textContent = score;
   $('breakdown-wrong').textContent = total - score;
@@ -906,6 +1088,9 @@ function initSettings() {
     } catch {}
   }
 
+  // Load Statbotics preference
+  state.settings.statboticsOnly = isStatboticsOnly();
+
   if (!state.settings.mode || !['popular', 'top', 'random', 'state', 'event'].includes(state.settings.mode)) {
     state.settings.mode = 'popular';
   }
@@ -916,10 +1101,29 @@ function initSettings() {
   // Photo-only toggle
   const photoToggle = $('photo-only-toggle');
   if (photoToggle) {
-    photoToggle.checked = !!state.settings.requirePhotos;
+    photoToggle.checked = !!state.settings.requirePhotos && !state.settings.statboticsOnly;
     photoToggle.addEventListener('change', e => {
       state.settings.requirePhotos = e.target.checked;
       saveSettings();
+    });
+  }
+
+  // Statbotics Only toggle
+  const statToggle = $('statbotics-only-toggle');
+  if (statToggle) {
+    statToggle.checked = state.settings.statboticsOnly;
+    statToggle.addEventListener('change', e => {
+      const enabled = e.target.checked;
+      state.settings.statboticsOnly = enabled;
+      if (enabled) {
+        localStorage.setItem('frcq-statbotics-only', 'true');
+        toast('Statbotics Only mode enabled.');
+      } else {
+        localStorage.removeItem('frcq-statbotics-only');
+        toast('Statbotics Only mode disabled.');
+      }
+      saveSettings();
+      updateApiNotice();
     });
   }
 
@@ -939,6 +1143,49 @@ function initSettings() {
     });
   }
 
+  // Theme Settings
+  const storedTheme = getStoredTheme();
+
+  const darkRadio = $('theme-dark');
+  const lightRadio = $('theme-light');
+  if (darkRadio && lightRadio) {
+    darkRadio.addEventListener('change', () => {
+      storedTheme.mode = 'dark';
+      applyTheme(storedTheme);
+    });
+    lightRadio.addEventListener('change', () => {
+      storedTheme.mode = 'light';
+      applyTheme(storedTheme);
+    });
+  }
+
+  const outlineToggle = $('no-outlines-toggle');
+  if (outlineToggle) {
+    outlineToggle.addEventListener('change', e => {
+      storedTheme.noOutlines = e.target.checked;
+      applyTheme(storedTheme);
+    });
+  }
+
+  document.querySelectorAll('.color-swatch').forEach(swatch => {
+    swatch.addEventListener('click', () => {
+      const color = swatch.getAttribute('data-color');
+      if (color) {
+        storedTheme.accentColor = color;
+        applyTheme(storedTheme);
+      }
+    });
+  });
+
+  const customPicker = $('custom-color-picker');
+  if (customPicker) {
+    customPicker.addEventListener('input', e => {
+      storedTheme.accentColor = e.target.value;
+      applyTheme(storedTheme);
+    });
+  }
+
+  applyTheme(storedTheme, false);
   updateApiNotice();
   applySettingsToUI();
 
@@ -952,49 +1199,70 @@ function initSettings() {
   });
 
   // Top teams count selector
-  $('top-count-select').addEventListener('change', e => {
-    state.settings.topCount = parseInt(e.target.value);
-    saveSettings();
-  });
+  const topCountSelect = $('top-count-select');
+  if (topCountSelect) {
+    topCountSelect.addEventListener('change', e => {
+      state.settings.topCount = parseInt(e.target.value);
+      saveSettings();
+    });
+  }
 
   // Year selector
-  $('year-select').addEventListener('change', e => {
-    state.settings.year = parseInt(e.target.value);
-    $('stat-year').textContent = state.settings.year;
-    state.allEvents = [];
-    state.cachedTopTeams = null;
-    state.cachedTopTeamsYear = null;
-    state.cachedPages = {};
-    state.imageCache = {};
-    state.verifiedPhotoPool = [];
-    state.teamPool = [];
-    state.usedTeamKeys.clear();
-    saveSettings();
-    if (state.settings.mode === 'event') loadEventsUI();
-  });
+  const yearSelect = $('year-select');
+  if (yearSelect) {
+    yearSelect.addEventListener('change', e => {
+      state.settings.year = parseInt(e.target.value);
+      $('stat-year').textContent = state.settings.year;
+      state.allEvents = [];
+      state.cachedTopTeams = null;
+      state.cachedTopTeamsYear = null;
+      state.cachedPages = {};
+      state.imageCache = {};
+      state.verifiedPhotoPool = [];
+      state.teamPool = [];
+      state.usedTeamKeys.clear();
+      saveSettings();
+      if (state.settings.mode === 'event') loadEventsUI();
+    });
+  }
 
   // Answer choices
-  $('choices-select').addEventListener('change', e => {
-    state.settings.answerChoices = parseInt(e.target.value);
-    saveSettings();
-  });
+  const choicesSelect = $('choices-select');
+  if (choicesSelect) {
+    choicesSelect.addEventListener('change', e => {
+      state.settings.answerChoices = parseInt(e.target.value);
+      saveSettings();
+    });
+  }
 
   // State search
-  $('state-search').addEventListener('input', debounce(filterStates, 200));
+  const stateSearch = $('state-search');
+  if (stateSearch) {
+    stateSearch.addEventListener('input', debounce(filterStates, 200));
+  }
 
   // Event search
-  $('event-search').addEventListener('input', debounce(filterEvents, 250));
+  const eventSearch = $('event-search');
+  if (eventSearch) {
+    eventSearch.addEventListener('input', debounce(filterEvents, 250));
+  }
 
   updateModeSubPickers(state.settings.mode);
 }
 
 function updateModeSubPickers(mode) {
-  $('top-count-picker').classList.toggle('show', mode === 'top');
-  $('state-picker').classList.toggle('show', mode === 'state');
-  $('event-picker').classList.toggle('show', mode === 'event');
+  const popularNotice = $('popular-notice');
+  const topPicker = $('top-count-picker');
+  const statePicker = $('state-picker');
+  const eventPicker = $('event-picker');
+
+  if (popularNotice) popularNotice.classList.toggle('show', mode === 'popular');
+  if (topPicker) topPicker.classList.toggle('show', mode === 'top');
+  if (statePicker) statePicker.classList.toggle('show', mode === 'state');
+  if (eventPicker) eventPicker.classList.toggle('show', mode === 'event');
 
   if (mode === 'state') filterStates();
-  if (mode === 'event' && state.allEvents.length === 0) loadEventsUI();
+  if (mode === 'event' && state.allEvents.length === 0 && !isStatboticsOnly()) loadEventsUI();
 }
 
 function applySettingsToUI() {
@@ -1003,17 +1271,20 @@ function applySettingsToUI() {
   const radio = document.querySelector(`input[name="mode"][value="${s.mode}"]`);
   if (radio) radio.checked = true;
 
-  $('top-count-select').value = s.topCount || 100;
-  $('year-select').value = s.year;
-  $('choices-select').value = s.answerChoices;
+  if ($('top-count-select')) $('top-count-select').value = s.topCount || 100;
+  if ($('year-select')) $('year-select').value = s.year;
+  if ($('choices-select')) $('choices-select').value = s.answerChoices;
 
   const photoToggle = $('photo-only-toggle');
-  if (photoToggle) photoToggle.checked = !!s.requirePhotos;
+  if (photoToggle) photoToggle.checked = !!s.requirePhotos && !isStatboticsOnly();
 
-  if (s.stateRegion) {
+  const statToggle = $('statbotics-only-toggle');
+  if (statToggle) statToggle.checked = isStatboticsOnly();
+
+  if (s.stateRegion && $('state-search')) {
     $('state-search').value = s.stateRegion.name;
   }
-  if (s.event) {
+  if (s.event && $('event-search')) {
     $('event-search').value = s.event.name;
   }
 }
@@ -1026,13 +1297,44 @@ function updateApiNotice() {
   const notice = $('api-notice');
   if (!notice) return;
   const key = getTbaKey();
-  notice.style.display = key ? 'none' : 'flex';
+  const statOnly = isStatboticsOnly();
+
+  if (statOnly) {
+    notice.style.display = 'flex';
+    notice.innerHTML = '<span><strong>Statbotics Only Mode active:</strong> Playing with public Statbotics stats (no API key required). Robot photos and live TBA event lists are disabled.</span>';
+  } else if (key) {
+    notice.style.display = 'none';
+  } else {
+    notice.style.display = 'flex';
+    notice.innerHTML = '<span>Set your TBA API key below or in <strong>config.js</strong> before playing, or switch to Statbotics Only mode. Get a free key at <a href="https://www.thebluealliance.com/account" target="_blank" style="color:var(--warn)">thebluealliance.com/account</a>.</span>';
+  }
+
+  const photoRow = $('photo-only-row');
+  const photoToggle = $('photo-only-toggle');
+  if (photoToggle && photoRow) {
+    if (statOnly) {
+      photoToggle.checked = false;
+      photoToggle.disabled = true;
+      photoRow.style.opacity = '0.5';
+    } else {
+      photoToggle.disabled = false;
+      photoRow.style.opacity = '1';
+    }
+  }
+
+  const eventDisclaimer = $('event-statbotics-disclaimer');
+  if (eventDisclaimer) {
+    eventDisclaimer.style.display = statOnly ? 'flex' : 'none';
+  }
 }
 
 /* ── States List Filter ───────────────────────────────────── */
 function filterStates() {
-  const q = ($('state-search').value || '').toLowerCase();
+  const input = $('state-search');
+  if (!input) return;
+  const q = (input.value || '').toLowerCase();
   const container = $('state-results');
+  if (!container) return;
   container.innerHTML = '';
 
   const matches = FRC_REGIONS.filter(r =>
@@ -1062,6 +1364,7 @@ function filterStates() {
 async function loadEventsUI() {
   try {
     const container = $('event-results');
+    if (!container) return;
     container.innerHTML = '<div style="padding:10px 12px;font-size:0.85rem;color:var(--text-muted)">Loading events…</div>';
     await loadEvents(state.settings.year);
     filterEvents();
@@ -1071,8 +1374,11 @@ async function loadEventsUI() {
 }
 
 function filterEvents() {
-  const q = ($('event-search').value || '').toLowerCase();
+  const input = $('event-search');
+  if (!input) return;
+  const q = (input.value || '').toLowerCase();
   const container = $('event-results');
+  if (!container) return;
   container.innerHTML = '';
 
   const matches = state.allEvents.filter(e =>
@@ -1108,15 +1414,14 @@ function filterEvents() {
 /* ── Start Quiz Flow ──────────────────────────────────────── */
 async function startQuiz() {
   const key = getTbaKey();
-  if (!key) {
-    toast('Notice: Please enter your TBA API key in Settings first.');
-    showPage('settings');
+  const statOnly = isStatboticsOnly();
+
+  // Prompt the user for TBA key before playing if no key is entered and Statbotics-only is not active
+  if (!key && !statOnly) {
+    showApiKeyModal();
     return;
   }
 
-  // Start a brand new quiz session. Any quiz still loading (or any background
-  // scanner) from a previous selection becomes stale and stops writing state,
-  // so an old team pool can never leak into this one.
   const session = ++state.quizSession;
   state.verifiedPhotoPool = [];
   state.usedTeamKeys.clear();
@@ -1127,9 +1432,11 @@ async function startQuiz() {
   const loadingText = $('quiz-loading-text');
 
   try {
-    if (loadingText) loadingText.textContent = 'Building team roster…';
+    if (loadingText) {
+      loadingText.textContent = statOnly ? 'Building roster with Statbotics…' : 'Building team roster…';
+    }
     const built = await buildTeamPool(session);
-    if (!built || session !== state.quizSession) return; // superseded by a newer quiz start
+    if (!built || session !== state.quizSession) return;
 
     state.verifiedPhotoPool = [];
     state.usedTeamKeys.clear();
@@ -1137,21 +1444,17 @@ async function startQuiz() {
     state.score = 0;
     state.history = [];
 
-    // If "Only teams with photos" is enabled, ensure we have an initial batch of verified teams
-    if (state.settings.requirePhotos) {
+    // If photos are required and we are NOT in Statbotics mode, preload photos
+    if (state.settings.requirePhotos && !statOnly) {
       if (loadingText) loadingText.textContent = 'Pre-loading robot photos for instant quiz…';
 
       const year = state.settings.year;
-
-      // Check existing cached teams first
       state.teamPool.forEach(t => {
         if (state.imageCache[`${year}_${t.key}`]) {
           state.verifiedPhotoPool.push(t);
         }
       });
 
-      // When the pool is relatively small (<= 80 teams, e.g. regional events or states),
-      // scan ALL teams in the pool upfront so every single robot with a photo in that event is found!
       const unchecked = state.teamPool.filter(t => !(`${year}_${t.key}` in state.imageCache));
       const targetCount = state.teamPool.length <= 80 ? unchecked.length : Math.max(20, Math.ceil(state.teamPool.length * 0.4));
 
@@ -1177,17 +1480,16 @@ async function startQuiz() {
     if (session !== state.quizSession) return;
 
     $('quiz-loading').classList.remove('show');
-    if (loadingText) loadingText.textContent = 'Fetching teams from The Blue Alliance…';
     $('quiz-content').style.display = 'block';
 
-    // Start background scanner to continuously preload upcoming questions
-    startBackgroundPhotoScanner(80, session);
+    if (!statOnly) {
+      startBackgroundPhotoScanner(80, session);
+    }
 
     await renderQuestion(session);
   } catch (e) {
-    if (session !== state.quizSession) return; // superseded - don't hijack the newer quiz
+    if (session !== state.quizSession) return;
     $('quiz-loading').classList.remove('show');
-    if (loadingText) loadingText.textContent = 'Fetching teams from The Blue Alliance…';
     toast(`Error: ${e.message}`);
     console.error(e);
     showPage('home');
@@ -1204,9 +1506,9 @@ function debounce(fn, ms) {
 function updateHomeStats() {
   const best = JSON.parse(localStorage.getItem('frcq-best') || '{}');
   const sessions = parseInt(localStorage.getItem('frcq-sessions') || '0');
-  $('stat-sessions').textContent = sessions;
-  $('stat-best').textContent = best.pct != null ? `${best.pct}% (${best.score}/${best.total})` : '—';
-  $('stat-year').textContent = state.settings.year;
+  if ($('stat-sessions')) $('stat-sessions').textContent = sessions;
+  if ($('stat-best')) $('stat-best').textContent = best.pct != null ? `${best.pct}% (${best.score}/${best.total})` : '—';
+  if ($('stat-year')) $('stat-year').textContent = state.settings.year;
 }
 
 function recordSessionResult() {
@@ -1236,10 +1538,62 @@ document.addEventListener('DOMContentLoaded', () => {
   $('nav-settings').addEventListener('click', () => showPage('settings'));
   $('logo-link').addEventListener('click', () => { showPage('home'); updateHomeStats(); });
 
-  // Home buttons
-  $('start-btn').addEventListener('click', startQuiz);
-  $('start-btn-2').addEventListener('click', startQuiz);
-  $('settings-link').addEventListener('click', () => showPage('settings'));
+  // Home Start button
+  const startBtn = $('start-btn');
+  if (startBtn) {
+    startBtn.addEventListener('click', startQuiz);
+  }
+
+  // Modal handlers
+  const modalSaveBtn = $('modal-save-btn');
+  if (modalSaveBtn) {
+    modalSaveBtn.addEventListener('click', () => {
+      const input = $('modal-tba-input');
+      const val = input ? input.value.trim() : '';
+      if (!val) {
+        toast('Please enter a valid TBA API key or choose Statbotics Only.');
+        return;
+      }
+      localStorage.setItem('frcq-tba-key', val);
+      localStorage.removeItem('frcq-statbotics-only');
+      state.settings.statboticsOnly = false;
+      const tbaInput = $('tba-api-input');
+      if (tbaInput) tbaInput.value = val;
+      const statToggle = $('statbotics-only-toggle');
+      if (statToggle) statToggle.checked = false;
+      updateApiNotice();
+      hideApiKeyModal();
+      toast('TBA API key saved!');
+      startQuiz();
+    });
+  }
+
+  const modalStatBtn = $('modal-statbotics-btn');
+  if (modalStatBtn) {
+    modalStatBtn.addEventListener('click', () => {
+      localStorage.setItem('frcq-statbotics-only', 'true');
+      state.settings.statboticsOnly = true;
+      const statToggle = $('statbotics-only-toggle');
+      if (statToggle) statToggle.checked = true;
+      updateApiNotice();
+      hideApiKeyModal();
+      toast('Running in Statbotics Only mode.');
+      startQuiz();
+    });
+  }
+
+  const modalCloseBtn = $('modal-close-btn');
+  if (modalCloseBtn) {
+    modalCloseBtn.addEventListener('click', hideApiKeyModal);
+  }
+
+  // Close modal when clicking outside of card
+  const modalOverlay = $('api-key-modal');
+  if (modalOverlay) {
+    modalOverlay.addEventListener('click', e => {
+      if (e.target === modalOverlay) hideApiKeyModal();
+    });
+  }
 
   // Next question button
   const nextBtn = $('next-btn');
@@ -1247,11 +1601,10 @@ document.addEventListener('DOMContentLoaded', () => {
     nextBtn.addEventListener('click', nextQuestion);
   }
 
-  // Keyboard shortcut to advance to next question
+  // Keyboard shortcut (Enter / Space) to advance question
   window.addEventListener('keydown', e => {
     if (e.key === 'Enter' || e.key === ' ') {
       const activeEl = document.activeElement;
-      // Don't trigger if user is typing in an input
       if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'SELECT')) return;
       if (state.answered && nextBtn && nextBtn.style.display !== 'none' && !nextBtn.disabled) {
         e.preventDefault();
@@ -1260,7 +1613,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Stop / Finish quiz anytime
+  // Finish quiz button
   $('finish-btn').addEventListener('click', () => {
     if (state.history.length === 0) {
       toast('Returned home.');
